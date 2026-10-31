@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DropLink</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' https://0.peerjs.com wss://0.peerjs.com; worker-src 'none'; frame-ancestors 'none'">
+<meta name="referrer" content="no-referrer">
+<style>
+  :root { --bg:#fff; --fg:#1b1e23; --muted:#6b7280; --card:#f6f7f9; --line:#dfe2e6; --accent:#2563eb; --ok:#157f3b; --bad:#b42318; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#14161a; --fg:#e8eaed; --muted:#9aa0a6; --card:#1e2128; --line:#2f343c; --accent:#6ea0ff; --ok:#4ec27a; --bad:#ff7b72; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.4 system-ui,sans-serif; }
+  main { max-width:520px; margin:0 auto; padding:24px 16px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  p.sub { color:var(--muted); margin:0 0 20px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px; }
+  button, input, textarea { font:inherit; color:inherit; }
+  button { background:var(--accent); color:#fff; border:0; border-radius:8px; padding:10px 14px; cursor:pointer; }
+  button.alt { background:transparent; color:var(--accent); border:1px solid var(--line); }
+  input, textarea { width:100%; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px; }
+  .row { display:flex; gap:8px; } .row > * { flex:1; } .row > input { flex:2; }
+  #code { font-size:40px; letter-spacing:.15em; font-weight:700; text-align:center; font-variant-numeric:tabular-nums; }
+  #qr { display:block; margin:12px auto; width:200px; background:#fff; padding:8px; border-radius:8px; }
+  #qr svg { width:100%; height:auto; display:block; }
+  video { width:100%; border-radius:8px; background:#000; }
+  .status { color:var(--muted); text-align:center; }
+  .status.ok { color:var(--ok); } .status.bad { color:var(--bad); }
+  .item { border-top:1px solid var(--line); padding:10px 0; word-break:break-word; }
+  .item:first-child { border-top:0; }
+  .item small { color:var(--muted); display:block; }
+  .item pre { white-space:pre-wrap; margin:4px 0; font:inherit; }
+  progress { width:100%; }
+  #drop.over { outline:2px dashed var(--accent); }
+  .pend { display:flex; gap:8px; align-items:center; justify-content:space-between; }
+  .pend button { flex:none; padding:6px 10px; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>DropLink</h1>
+  <p class="sub">Send text and files straight between devices. Nothing is uploaded or stored anywhere.</p>
+
+  <div id="start">
+    <div class="card">
+      <input id="name" maxlength="24" placeholder="Your name" autocomplete="nickname">
+    </div>
+    <div class="card">
+      <button id="host" style="width:100%">Start a room</button>
+    </div>
+    <div class="card">
+      <p style="margin-top:0">Or join a room</p>
+      <div class="row">
+        <input id="join-code" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="6-digit code" autocomplete="off">
+        <button id="join">Connect</button>
+      </div>
+      <p style="margin-bottom:0"><button id="scan" class="alt" style="width:100%">Scan QR code</button></p>
+    </div>
+  </div>
+
+  <div id="scanner" class="card" hidden>
+    <video id="video" playsinline muted></video>
+    <p><button id="scan-cancel" class="alt" style="width:100%">Cancel</button></p>
+  </div>
+
+  <div id="waiting" class="card" hidden>
+    <div id="code"></div>
+    <div id="qr"></div>
+    <p class="status">Others join by entering this code or scanning the QR code. You approve each person.</p>
+  </div>
+
+  <p id="status" class="status" role="status"></p>
+
+  <div id="pending" class="card" hidden></div>
+
+  <div id="connected" hidden>
+    <p class="status" id="members"></p>
+    <div class="card">
+      <textarea id="text" rows="3" placeholder="Type or paste text to send"></textarea>
+      <p style="margin-bottom:0"><button id="send-text" style="width:100%">Send text</button></p>
+    </div>
+    <div class="card" id="drop">
+      <input id="files" type="file" multiple>
+      <p style="margin-bottom:0"><button id="send-files" style="width:100%">Send files</button></p>
+      <p class="status" style="margin:8px 0 0">or drop files here</p>
+    </div>
+    <div class="card" id="log" hidden></div>
+    <button id="leave" class="alt" style="width:100%">Leave room</button>
+  </div>
+</main>
+<script src="vendor/peerjs.min.js"></script>
+<script src="vendor/qrcode.js"></script>
+<script src="vendor/jsqr.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
