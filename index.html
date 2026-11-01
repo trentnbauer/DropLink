@@ -57,13 +57,6 @@
     <footer class="foot"><svg class="i" aria-hidden="true"><use href="#i-lock-simple"/></svg><span class="redact" data-redact="End-to-end, device to device. Up to 8 people." data-offset="2600"></span></footer>
   </section>
 
-  <section id="v-knock" class="view knock" hidden>
-    <div class="knock-av" id="knock-av"></div>
-    <h2>Knocking on <span id="knock-code" class="mono"></span></h2>
-    <p class="muted">The host needs to let you in. Keep this screen open.</p>
-    <button id="knock-cancel" class="btn">Cancel</button>
-  </section>
-
   <section id="v-room" class="view room" hidden>
     <aside class="side">
       <div class="lobby-top">
@@ -88,9 +81,9 @@
         <div class="sec-head"><span>In the room</span><span id="mem-n"></span></div>
         <ul id="mem-list" class="list"></ul>
       </div>
+      <label id="auto-wrap" class="auto" hidden><input type="checkbox" id="auto"><span>Let people in without asking</span></label>
       <div class="side-foot">
-        <button id="lobby-wait" class="btn" disabled><span class="redact" data-redact="Waiting for someone to join…" data-offset="2000"></span></button>
-        <button id="to-thread" class="btn mob" hidden>Back to thread<svg class="i" aria-hidden="true"><use href="#i-arrow-right"/></svg></button>
+        <button id="to-thread" class="btn mob">Back to thread<svg class="i" aria-hidden="true"><use href="#i-arrow-right"/></svg></button>
         <button id="leave-d" class="btn desk"><svg class="i" aria-hidden="true"><use href="#i-sign-out"/></svg><span id="leave-d-t">Close room</span></button>
       </div>
     </aside>
@@ -98,7 +91,7 @@
     <section class="main">
       <header class="head-m">
         <div class="head-row">
-          <span id="head-code" class="mono head-code"></span>
+          <button id="head-code" class="head-code" aria-label="Room details"></button>
           <button id="badge" class="btn sm" hidden></button>
           <button id="leave-t" class="icon-btn" aria-label="Leave room"><svg class="i" aria-hidden="true"><use href="#i-sign-out"/></svg></button>
         </div>

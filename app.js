@@ -13,7 +13,9 @@ const members = new Map(); // peer id -> { conn, name }: approved people we can 
 const pending = new Map(); // host only: peer id -> { conn, name } waiting for approval
 const allowed = new Set(); // ids the host announced as approved newcomers
 const incoming = new Map(); // peer id -> { item, parts } file being received
-let sending = 0; // files currently being sent
+let sending = 0; // transfers currently running
+const outbox = []; // everything this device has sent: handed to anyone who joins later
+let queue = Promise.resolve(); // one transfer at a time per device keeps each stream unambiguous
 
 // --- small DOM helpers ---
 
@@ -38,13 +40,17 @@ function fmt(n) {
   return n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : n < 1073741824 ? `${(n / 1048576).toFixed(1)} MB` : `${(n / 1073741824).toFixed(1)} GB`;
 }
 
-// --- redaction: headings, status lines and system notes randomly black out or turn to *** ---
+// --- redaction: only words that carry meaning for a privacy tool are ever blacked out or turned to *** ---
 
+const SENSITIVE = new Set(['device', 'devices', 'peer', 'peer-to-peer', 'someone', 'anyone', 'everyone', 'people', 'person', 'room', 'code', 'name', 'host', 'guest', 'file', 'files', 'text', 'message', 'messages', 'data', 'private', 'nothing', 'uploaded', 'stored', 'things']);
+const core = (w) => w.toLowerCase().replace(/[^a-z-]/g, '');
 const calm = matchMedia('(prefers-reduced-motion: reduce)');
-function redact(el, text, offset = 0) {
+// extra: more words to target, e.g. the person's name in "Bob joined"
+function redact(el, text, offset = 0, extra = []) {
   clearTimeout(el._t1); clearTimeout(el._t2);
   el.textContent = '';
   el.setAttribute('aria-label', text);
+  const targets = new Set(extra.map(core));
   const words = text.split(' ');
   const spans = words.map((w, i) => {
     const s = h('span', 'rd', w);
@@ -52,18 +58,23 @@ function redact(el, text, offset = 0) {
     el.append(s, i < words.length - 1 ? ' ' : '');
     return s;
   });
-  if (calm.matches) return;
+  const hits = words.map((w, i) => i).filter((i) => SENSITIVE.has(core(words[i])) || targets.has(core(words[i])));
+  if (calm.matches || !hits.length) return; // nothing worth hiding in this line
   const cycle = () => {
     if (!el.isConnected) return; // gone for good, stop the timers
-    const n = Math.random() < 0.35 ? 2 : 1;
-    const start = Math.floor(Math.random() * Math.max(1, words.length - n + 1));
+    const first = hits[Math.floor(Math.random() * hits.length)];
+    const pick = [first];
+    if (Math.random() < 0.35 && hits.includes(first + 1)) pick.push(first + 1); // two meaningful words side by side
     const stars = Math.random() >= 0.6;
-    const hit = spans.slice(start, start + n);
-    hit.forEach((s, k) => {
-      if (stars) { s.textContent = '*'.repeat(Math.max(3, words[start + k].length)); s.classList.add('star'); } else s.classList.add('bar');
-    });
+    for (const i of pick) {
+      if (stars) {
+        const [, lead, body, tail] = /^(\W*)(.*?)(\W*)$/.exec(words[i]);
+        spans[i].textContent = lead + '*'.repeat(Math.max(3, body.length)) + tail;
+        spans[i].classList.add('star');
+      } else spans[i].classList.add('bar');
+    }
     el._t2 = setTimeout(() => {
-      hit.forEach((s, k) => { s.textContent = words[start + k]; s.className = 'rd'; });
+      for (const i of pick) { spans[i].textContent = words[i]; spans[i].className = 'rd'; }
       el._t1 = setTimeout(cycle, 1600 + Math.random() * 2600);
     }, 900 + Math.random() * 900);
   };
@@ -73,10 +84,10 @@ document.querySelectorAll('.redact').forEach((el) => redact(el, el.dataset.redac
 
 // --- views ---
 
-let pane = 'thread'; // phones show the lobby (side) or the thread, never both
+let pane = 'thread'; // phones show the thread or the room details (code, people, requests), never both
 function setView(v) {
   $('app').dataset.view = v;
-  for (const id of ['start', 'knock', 'room']) $('v-' + id).hidden = id !== v;
+  for (const id of ['start', 'room']) $('v-' + id).hidden = id !== v;
 }
 function setPane(p) {
   pane = p;
@@ -99,6 +110,8 @@ function reset(msg, cls) {
   peer = hostId = isHost = roomCode = null;
   members.clear(); pending.clear(); allowed.clear(); incoming.clear();
   sending = 0;
+  outbox.length = 0;
+  queue = Promise.resolve();
   for (const it of thread) if (it.blobUrl) URL.revokeObjectURL(it.blobUrl);
   thread.length = 0;
   $('thread').textContent = '';
@@ -179,7 +192,8 @@ function startHost() {
   peer = newPeer(PREFIX + roomCode);
   peer.on('open', () => {
     setView('room');
-    setPane('side');
+    setPane('thread');
+    sysLine('Room open. Files and text you send now go to everyone who joins.');
     renderRoom();
   });
 }
@@ -188,9 +202,10 @@ function startJoin(code) {
   if (!takeName()) return;
   roomCode = code;
   hostId = PREFIX + code;
-  $('knock-av').textContent = (myName[0] || '?').toUpperCase();
-  $('knock-code').textContent = code.slice(0, 3) + '·' + code.slice(3);
-  setView('knock');
+  setView('room');
+  setPane('thread');
+  sysLine('Waiting for the host to let you in…');
+  renderRoom();
   peer = newPeer();
   peer.on('open', () => connectTo(hostId));
 }
@@ -214,22 +229,20 @@ function wire(conn, outbound) {
     if (m?.conn === conn) {
       members.delete(conn.peer);
       incoming.delete(conn.peer);
-      sysLine(`${m.name} left`);
+      sysLine(`${m.name} left`, m.name);
       if (!isHost && !members.size) return reset('The room is closed.');
-      if (isHost && !members.size) setPane('side');
     }
     renderRoom();
   });
 }
 
 function addMember(conn, name) {
-  const first = !members.size;
   const nm = String(name).trim().slice(0, 24) || 'Guest';
   members.set(conn.peer, { conn, name: nm });
-  if ($('app').dataset.view !== 'room') setView('room');
-  if (first) setPane('thread');
-  sysLine(`${nm} joined`);
+  sysLine(`${nm} joined`, nm);
   renderRoom();
+  // hand the newcomer everything this device has sent so far (queued behind any transfer already running)
+  for (const entry of outbox) queueDeliver(entry, [members.get(conn.peer)]);
 }
 
 function onControl(conn, m) {
@@ -241,6 +254,7 @@ function onControl(conn, m) {
     if (isHost) {
       if (members.size + pending.size >= MAX_MEMBERS - 1) return conn.close();
       pending.set(id, { conn, name: String(m.name).trim().slice(0, 24) || 'Guest' });
+      if ($('auto').checked) return approve(id, true);
       return renderRoom();
     }
     if (allowed.has(id)) { addMember(conn, m.name); sendJson(conn, { t: 'hi', name: myName }); } else conn.close();
@@ -289,13 +303,24 @@ function approve(id, ok) {
 
 const everyone = () => [...members.values()].filter((m) => m.conn.open);
 
-async function sendFile(file) {
-  const targets = everyone();
+const queueDeliver = (entry, to) => { queue = queue.then(() => deliver(entry, to)); };
+
+// Send one outbox entry to whoever in `to` (array, or function giving the list when its turn comes) has not got it yet.
+async function deliver(entry, to) {
+  const targets = (typeof to === 'function' ? to() : to).filter((m) => m?.conn.open && !entry.sentTo.has(m.conn.peer));
   if (!targets.length) return;
+  for (const m of targets) entry.sentTo.add(m.conn.peer);
+  const names = targets.map((m) => m.name);
+  const it = entry.item;
+  if (entry.kind === 'text') {
+    for (const { conn } of targets) sendJson(conn, { t: 'text', v: entry.text });
+    it.names.push(...names);
+    return update(it, true);
+  }
+  const { file } = entry;
   sending++;
-  const item = addItem({ kind: 'file', dir: 'out', name: file.name, size: file.size, type: file.type, bytes: 0, state: 'active', to: targets.map((t) => t.name) });
-  if (file.type.startsWith('image/')) item.blobUrl = URL.createObjectURL(file);
-  update(item, true);
+  Object.assign(it, { state: 'active', delivering: names, bytes: 0, samples: [], speed: 0 });
+  update(it, true);
   for (const { conn } of targets) sendJson(conn, { t: 'file', name: file.name, size: file.size, type: file.type });
   for (let off = 0; off < file.size; off += CHUNK) {
     const chunk = await file.slice(off, off + CHUNK).arrayBuffer();
@@ -303,27 +328,43 @@ async function sendFile(file) {
       while (conn.open && conn.dataChannel.bufferedAmount > BUFFER_HIGH) await new Promise((r) => setTimeout(r, 25));
       if (conn.open) conn.send(chunk);
     }
-    item.bytes = Math.min(file.size, off + CHUNK);
-    tick(item);
-    update(item);
+    it.bytes = Math.min(file.size, off + CHUNK);
+    tick(it);
+    update(it);
   }
   for (const { conn } of targets) sendJson(conn, { t: 'end' });
-  item.state = 'done';
+  it.names.push(...names);
+  Object.assign(it, { state: 'done', delivering: [] });
   sending--;
-  update(item, true);
+  update(it, true);
 }
 
-let queue = Promise.resolve(); // one file at a time keeps each stream unambiguous
-const enqueue = (files) => { for (const f of files) queue = queue.then(() => sendFile(f)); };
+function shareText(text) {
+  const entry = { kind: 'text', text, sentTo: new Set(), item: addItem({ kind: 'text', dir: 'out', text, names: [] }) };
+  outbox.push(entry);
+  queueDeliver(entry, everyone);
+}
+
+function shareFile(file) {
+  const item = addItem({ kind: 'file', dir: 'out', name: file.name, size: file.size, type: file.type, bytes: 0, state: 'done', names: [], delivering: [] });
+  if (file.type.startsWith('image/')) { item.blobUrl = URL.createObjectURL(file); update(item, true); }
+  const entry = { kind: 'file', file, sentTo: new Set(), item };
+  outbox.push(entry);
+  queueDeliver(entry, everyone);
+}
+
+const enqueue = (files) => files.forEach(shareFile);
+// a host can share while alone (it is held for whoever joins); a guest needs someone to share with
+const canShare = () => isHost || everyone().length > 0;
 
 // --- thread ---
 
 const thread = []; // { kind: 'text'|'file'|'system', dir, from, name, size, type, bytes, state, blobUrl, text, el, ui }
 
-function sysLine(text) {
+function sysLine(text, who = '') {
   const el = h('div', 'sys');
   $('thread').append(el);
-  redact(el, text, Math.random() * 1500);
+  redact(el, text, Math.random() * 1500, who.split(' ').filter(Boolean));
   thread.push({ kind: 'system', el });
   stick();
 }
@@ -362,6 +403,7 @@ function addItem(it) {
   const bubble = h('div', 'bubble' + (it.kind === 'file' ? ' file' : ''));
   if (it.kind === 'text') {
     bubble.append(h('pre', '', it.text), copyBtn('Copy', () => it.text));
+    if (out) { it.ui = { meta: h('div', 'fmeta') }; bubble.append(it.ui.meta); }
   } else {
     it.ui = { pv: h('div', 'pv'), meta: h('div', 'fmeta'), track: h('div', 'track'), fill: h('i'), save: null };
     it.ui.pv.hidden = true;
@@ -379,7 +421,7 @@ function addItem(it) {
   it.el = row;
   thread.push(it);
   $('thread').append(row);
-  if (it.kind === 'file') update(it, true);
+  if (it.ui) update(it, true);
   stick();
   return it;
 }
@@ -394,28 +436,35 @@ function tick(it) {
 }
 
 function update(it, force) {
+  if (it.kind === 'text') {
+    it.ui.meta.textContent = '';
+    if (it.names.length) it.ui.meta.append(icon('checks'), `Sent to ${it.names.join(', ')}`);
+    else it.ui.meta.textContent = 'Held · goes to anyone who joins';
+    return;
+  }
   const now = performance.now();
   if (!force && now - it.paint < 100) return; // chunks arrive far faster than the screen needs
   it.paint = now;
   const { meta, fill, track, pv, frow } = it.ui;
-  const done = it.state === 'done';
+  const active = it.state === 'active';
   const pct = it.size ? Math.min(100, Math.floor((it.bytes / it.size) * 100)) : 100;
-  fill.style.width = (done ? 100 : pct) + '%';
-  track.hidden = done;
+  fill.style.width = (active ? pct : 100) + '%';
+  track.hidden = !active;
   meta.textContent = '';
-  if (done && it.dir === 'out') {
-    meta.append(icon('checks'), `Delivered to ${it.to.length} · ${fmt(it.size)}`);
-  } else if (done) {
-    meta.textContent = fmt(it.size);
-  } else {
+  if (active) {
     const speed = it.speed ? ` · ${fmt(it.speed)}/s` : '';
-    meta.textContent = `${it.dir === 'out' ? `To ${it.to.join(', ')} · ` : ''}${pct}% of ${fmt(it.size)}${speed}`;
+    meta.textContent = `${it.dir === 'out' ? `To ${it.delivering.join(', ')} · ` : ''}${pct}% of ${fmt(it.size)}${speed}`;
+  } else if (it.dir === 'out') {
+    if (it.names.length) meta.append(icon('checks'), `Delivered to ${it.names.length} · ${fmt(it.size)}`);
+    else meta.textContent = `Ready · goes to anyone who joins · ${fmt(it.size)}`;
+  } else {
+    meta.textContent = fmt(it.size);
   }
   if (it.blobUrl && !pv.firstChild && it.type.startsWith('image/')) {
     pv.append(Object.assign(h('img'), { src: it.blobUrl, alt: '' }));
     pv.hidden = false;
   }
-  if (done && it.dir === 'in' && !it.ui.save) {
+  if (!active && it.dir === 'in' && !it.ui.save) {
     it.ui.save = Object.assign(h('a', 'save'), { href: it.blobUrl, download: it.name });
     it.ui.save.append(icon('download-simple'), 'Save');
     frow.append(it.ui.save);
@@ -482,22 +531,21 @@ function renderRoom() {
   badge.hidden = !(isHost && pending.size);
   badge.textContent = `${pending.size} waiting`;
 
-  $('lobby-wait').hidden = !(isHost && !members.size);
-  $('to-thread').hidden = !members.size;
+  $('auto-wrap').hidden = !isHost;
   $('leave-m-t').textContent = isHost ? 'Close' : 'Leave';
   $('leave-d-t').textContent = isHost ? 'Close room' : 'Leave room';
-  const ready = everyone().length > 0;
-  for (const id of ['text', 'send', 'attach']) $(id).disabled = !ready;
+  for (const id of ['text', 'send', 'attach']) $(id).disabled = !canShare();
 }
 
 // --- wiring ---
 
 $('host').onclick = startHost;
 $('join').onclick = () => (CODE_RE.test(readCode()) ? startJoin(readCode()) : status('Enter all 6 characters.', 'bad'));
-$('knock-cancel').onclick = () => reset();
 for (const id of ['leave-m', 'leave-d', 'leave-t']) $(id).onclick = leave;
 $('to-thread').onclick = () => setPane('thread');
 $('badge').onclick = () => setPane('side');
+$('head-code').onclick = () => setPane('side');
+$('auto').onchange = () => { if ($('auto').checked) for (const id of [...pending.keys()]) approve(id, true); };
 for (const id of ['copy-code-m', 'copy-code-d']) {
   $(id).onclick = async () => {
     try { await navigator.clipboard.writeText(roomCode); } catch { return; }
@@ -520,21 +568,18 @@ text.addEventListener('paste', (e) => {
 });
 $('composer').onsubmit = (e) => {
   e.preventDefault();
-  const v = text.value.trim();
-  const to = everyone();
-  if (!v || !to.length) return;
-  for (const { conn } of to) sendJson(conn, { t: 'text', v: text.value });
-  addItem({ kind: 'text', dir: 'out', text: text.value });
+  if (!text.value.trim() || !canShare()) return;
+  shareText(text.value);
   text.value = '';
   text.style.height = 'auto';
 };
 $('attach').onclick = () => $('files').click();
-$('files').onchange = () => { enqueue([...$('files').files]); $('files').value = ''; };
+$('files').onchange = () => { if (canShare()) enqueue([...$('files').files]); $('files').value = ''; };
 
-// drag and drop anywhere on the page while in a room with someone to send to
+// drag and drop anywhere on the page while in a room
 let drags = 0;
 const hasFiles = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
-const canDrop = () => $('app').dataset.view === 'room' && everyone().length > 0 && !$('v-room').hidden;
+const canDrop = () => $('app').dataset.view === 'room' && canShare();
 addEventListener('dragenter', (e) => { if (hasFiles(e) && canDrop()) { drags++; $('drop').hidden = false; } });
 addEventListener('dragover', (e) => { if (hasFiles(e)) e.preventDefault(); });
 addEventListener('dragleave', (e) => { if (hasFiles(e) && --drags <= 0) { drags = 0; $('drop').hidden = true; } });
