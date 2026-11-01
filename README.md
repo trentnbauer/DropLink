@@ -5,7 +5,7 @@ Devices find each other through the public PeerJS broker (`0.peerjs.com`), then 
 
 - Start a room and you are in the app straight away. Read the 6-character code (it also shows a phonetic spelling) to other people, or join by typing a code.
 - Anything you send is held on your device and handed to everyone who joins later, so you can share first and have people join afterwards. People who joined earlier get it live.
-- The host approves each person (one tap), or ticks "Let people in without asking". Rooms hold up to 8 people and everyone is linked to everyone.
+- The host approves each person (one tap) while the guest sees a "Knocking" screen, or ticks "Let people in without asking" and guests go straight in. Rooms hold up to 8 people and everyone is linked to everyone.
 - Text and files go straight between devices. Names are shown on everything people send.
 - Held items live in the sender's open tab. If a sender closes the page, what only they had is gone.
 - A `?c=CODE` link pre-fills the join form.

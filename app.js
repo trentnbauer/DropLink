@@ -87,7 +87,7 @@ document.querySelectorAll('.redact').forEach((el) => redact(el, el.dataset.redac
 let pane = 'thread'; // phones show the thread or the room details (code, people, requests), never both
 function setView(v) {
   $('app').dataset.view = v;
-  for (const id of ['start', 'room']) $('v-' + id).hidden = id !== v;
+  for (const id of ['start', 'knock', 'room']) $('v-' + id).hidden = id !== v;
 }
 function setPane(p) {
   pane = p;
@@ -202,10 +202,7 @@ function startJoin(code) {
   if (!takeName()) return;
   roomCode = code;
   hostId = PREFIX + code;
-  setView('room');
-  setPane('thread');
-  sysLine('Waiting for the host to let you in…');
-  renderRoom();
+  status('Connecting…');
   peer = newPeer();
   peer.on('open', () => connectTo(hostId));
 }
@@ -239,6 +236,7 @@ function wire(conn, outbound) {
 function addMember(conn, name) {
   const nm = String(name).trim().slice(0, 24) || 'Guest';
   members.set(conn.peer, { conn, name: nm });
+  if ($('app').dataset.view !== 'room') { setView('room'); setPane('thread'); } // a guest leaves the knocking screen
   sysLine(`${nm} joined`, nm);
   renderRoom();
   // hand the newcomer everything this device has sent so far (queued behind any transfer already running)
@@ -255,12 +253,17 @@ function onControl(conn, m) {
       if (members.size + pending.size >= MAX_MEMBERS - 1) return conn.close();
       pending.set(id, { conn, name: String(m.name).trim().slice(0, 24) || 'Guest' });
       if ($('auto').checked) return approve(id, true);
+      sendJson(conn, { t: 'knock' }); // tell the guest to wait for the host
       return renderRoom();
     }
     if (allowed.has(id)) { addMember(conn, m.name); sendJson(conn, { t: 'hi', name: myName }); } else conn.close();
   } else if (m.t === 'welcome' && fromHost && conn.outbound) {
     addMember(conn, m.hostName);
     for (const pid of m.peers) if (pid !== peer.id) connectTo(pid);
+  } else if (m.t === 'knock' && fromHost && conn.outbound) {
+    $('knock-av').textContent = (myName[0] || '?').toUpperCase();
+    $('knock-code').textContent = roomCode.slice(0, 3) + '·' + roomCode.slice(3);
+    setView('knock');
   } else if (m.t === 'denied' && fromHost) {
     reset('The host declined your request.', 'bad');
   } else if (m.t === 'joining' && fromHost) {
@@ -544,6 +547,7 @@ $('join').onclick = () => (CODE_RE.test(readCode()) ? startJoin(readCode()) : st
 for (const id of ['leave-m', 'leave-d', 'leave-t']) $(id).onclick = leave;
 $('to-thread').onclick = () => setPane('thread');
 $('badge').onclick = () => setPane('side');
+$('knock-cancel').onclick = () => reset();
 $('head-code').onclick = () => setPane('side');
 $('auto').onchange = () => { if ($('auto').checked) for (const id of [...pending.keys()]) approve(id, true); };
 for (const id of ['copy-code-m', 'copy-code-d']) {

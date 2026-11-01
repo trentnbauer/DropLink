@@ -75,6 +75,12 @@ button, input, textarea { font: inherit; color: inherit; }
 .join .btn:not(:disabled) { border-color: var(--ink); }
 .foot { margin-top: auto; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--dim); }
 
+/* knock */
+.knock { min-height: 100dvh; align-items: center; justify-content: center; text-align: center; gap: 14px; padding: 24px; display: flex; flex-direction: column; }
+.knock-av { width: 72px; height: 72px; border-radius: 50%; background: var(--ink); color: var(--bg); display: grid; place-items: center; font-size: 26px; font-weight: 600; box-shadow: 0 0 0 10px var(--bg), 0 0 0 11px var(--border), 0 0 0 26px var(--bg), 0 0 0 27px var(--rule); margin-bottom: 24px; }
+.knock h2 { font-size: 18px; font-weight: 500; }
+.knock .btn { margin-top: 12px; padding: 12px 24px; }
+
 /* room: mobile first (panes) */
 .room { display: block; }
 .side { min-height: 100dvh; padding: 56px 24px 28px; display: flex; flex-direction: column; gap: 22px; }
