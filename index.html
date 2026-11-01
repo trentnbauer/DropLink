@@ -2,96 +2,127 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>DropLink</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' https://0.peerjs.com wss://0.peerjs.com; worker-src 'none'; frame-ancestors 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self'; font-src 'self'; connect-src 'self' https://0.peerjs.com wss://0.peerjs.com; worker-src 'none'">
 <meta name="referrer" content="no-referrer">
-<style>
-  :root { --bg:#fff; --fg:#1b1e23; --muted:#6b7280; --card:#f6f7f9; --line:#dfe2e6; --accent:#2563eb; --ok:#157f3b; --bad:#b42318; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#14161a; --fg:#e8eaed; --muted:#9aa0a6; --card:#1e2128; --line:#2f343c; --accent:#6ea0ff; --ok:#4ec27a; --bad:#ff7b72; } }
-  * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.4 system-ui,sans-serif; }
-  main { max-width:520px; margin:0 auto; padding:24px 16px; }
-  h1 { font-size:22px; margin:0 0 4px; }
-  p.sub { color:var(--muted); margin:0 0 20px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px; }
-  button, input, textarea { font:inherit; color:inherit; }
-  button { background:var(--accent); color:#fff; border:0; border-radius:8px; padding:10px 14px; cursor:pointer; }
-  button.alt { background:transparent; color:var(--accent); border:1px solid var(--line); }
-  input, textarea { width:100%; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px; }
-  .row { display:flex; gap:8px; } .row > * { flex:1; } .row > input { flex:2; }
-  #code { font-size:40px; letter-spacing:.15em; font-weight:700; text-align:center; font-variant-numeric:tabular-nums; }
-  #qr { display:block; margin:12px auto; width:200px; background:#fff; padding:8px; border-radius:8px; }
-  #qr svg { width:100%; height:auto; display:block; }
-  video { width:100%; border-radius:8px; background:#000; }
-  .status { color:var(--muted); text-align:center; }
-  .status.ok { color:var(--ok); } .status.bad { color:var(--bad); }
-  .item { border-top:1px solid var(--line); padding:10px 0; word-break:break-word; }
-  .item:first-child { border-top:0; }
-  .item small { color:var(--muted); display:block; }
-  .item pre { white-space:pre-wrap; margin:4px 0; font:inherit; }
-  progress { width:100%; }
-  #drop.over { outline:2px dashed var(--accent); }
-  .pend { display:flex; gap:8px; align-items:center; justify-content:space-between; }
-  .pend button { flex:none; padding:6px 10px; }
-  [hidden] { display:none !important; }
-</style>
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0f0e0c">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<main>
-  <h1>DropLink</h1>
-  <p class="sub">Send text and files straight between devices. Nothing is uploaded or stored anywhere.</p>
+<svg xmlns="http://www.w3.org/2000/svg" class="sprite" aria-hidden="true">
+<symbol id="i-arrows-left-right" viewBox="0 0 256 256"><path d="M213.66,181.66l-32,32a8,8,0,0,1-11.32-11.32L188.69,184H48a8,8,0,0,1,0-16H188.69l-18.35-18.34a8,8,0,0,1,11.32-11.32l32,32A8,8,0,0,1,213.66,181.66Zm-139.32-64a8,8,0,0,0,11.32-11.32L67.31,88H208a8,8,0,0,0,0-16H67.31L85.66,53.66A8,8,0,0,0,74.34,42.34l-32,32a8,8,0,0,0,0,11.32Z"/></symbol>
+<symbol id="i-user" viewBox="0 0 256 256"><path d="M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0C63.78,166.78,40.31,185.66,25.08,212a8,8,0,1,0,13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06,56.06,0,0,1,72,96Z"/></symbol>
+<symbol id="i-plus-circle" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm48-88a8,8,0,0,1-8,8H136v32a8,8,0,0,1-16,0V136H88a8,8,0,0,1,0-16h32V88a8,8,0,0,1,16,0v32h32A8,8,0,0,1,176,128Z"/></symbol>
+<symbol id="i-arrow-right" viewBox="0 0 256 256"><path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"/></symbol>
+<symbol id="i-lock-simple" viewBox="0 0 256 256"><path d="M208,80H176V56a48,48,0,0,0-96,0V80H48A16,16,0,0,0,32,96V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V96A16,16,0,0,0,208,80ZM96,56a32,32,0,0,1,64,0V80H96ZM208,208H48V96H208V208Z"/></symbol>
+<symbol id="i-sign-out" viewBox="0 0 256 256"><path d="M120,216a8,8,0,0,1-8,8H48a8,8,0,0,1-8-8V40a8,8,0,0,1,8-8h64a8,8,0,0,1,0,16H56V208h56A8,8,0,0,1,120,216Zm109.66-93.66-40-40a8,8,0,0,0-11.32,11.32L204.69,120H112a8,8,0,0,0,0,16h92.69l-26.35,26.34a8,8,0,0,0,11.32,11.32l40-40A8,8,0,0,0,229.66,122.34Z"/></symbol>
+<symbol id="i-copy" viewBox="0 0 256 256"><path d="M216,32H88a8,8,0,0,0-8,8V80H40a8,8,0,0,0-8,8V216a8,8,0,0,0,8,8H168a8,8,0,0,0,8-8V176h40a8,8,0,0,0,8-8V40A8,8,0,0,0,216,32ZM160,208H48V96H160Zm48-48H176V88a8,8,0,0,0-8-8H96V48H208Z"/></symbol>
+<symbol id="i-x" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></symbol>
+<symbol id="i-check" viewBox="0 0 256 256"><path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"/></symbol>
+<symbol id="i-plus" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"/></symbol>
+<symbol id="i-arrow-up" viewBox="0 0 256 256"><path d="M205.66,117.66a8,8,0,0,1-11.32,0L136,59.31V216a8,8,0,0,1-16,0V59.31L61.66,117.66a8,8,0,0,1-11.32-11.32l72-72a8,8,0,0,1,11.32,0l72,72A8,8,0,0,1,205.66,117.66Z"/></symbol>
+<symbol id="i-paperclip" viewBox="0 0 256 256"><path d="M209.66,122.34a8,8,0,0,1,0,11.32l-82.05,82a56,56,0,0,1-79.2-79.21L147.67,35.73a40,40,0,1,1,56.61,56.55L105,193A24,24,0,1,1,71,159L154.3,74.38A8,8,0,1,1,165.7,85.6L82.39,170.31a8,8,0,1,0,11.27,11.36L192.93,81A24,24,0,1,0,159,47L59.76,147.68a40,40,0,1,0,56.53,56.62l82.06-82A8,8,0,0,1,209.66,122.34Z"/></symbol>
+<symbol id="i-download-simple" viewBox="0 0 256 256"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0Zm-101.66,5.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0-11.32-11.32L136,124.69V32a8,8,0,0,0-16,0v92.69L93.66,98.34a8,8,0,0,0-11.32,11.32Z"/></symbol>
+<symbol id="i-checks" viewBox="0 0 256 256"><path d="M149.61,85.71l-89.6,88a8,8,0,0,1-11.22,0L10.39,136a8,8,0,1,1,11.22-11.41L54.4,156.79l84-82.5a8,8,0,1,1,11.22,11.42Zm96.1-11.32a8,8,0,0,0-11.32-.1l-84,82.5-18.83-18.5a8,8,0,0,0-11.21,11.42l24.43,24a8,8,0,0,0,11.22,0l89.6-88A8,8,0,0,0,245.71,74.39Z"/></symbol>
+<symbol id="i-file-pdf" viewBox="0 0 256 256"><path d="M224,152a8,8,0,0,1-8,8H192v16h16a8,8,0,0,1,0,16H192v16a8,8,0,0,1-16,0V152a8,8,0,0,1,8-8h32A8,8,0,0,1,224,152ZM92,172a28,28,0,0,1-28,28H56v8a8,8,0,0,1-16,0V152a8,8,0,0,1,8-8H64A28,28,0,0,1,92,172Zm-16,0a12,12,0,0,0-12-12H56v24h8A12,12,0,0,0,76,172Zm88,8a36,36,0,0,1-36,36H112a8,8,0,0,1-8-8V152a8,8,0,0,1,8-8h16A36,36,0,0,1,164,180Zm-16,0a20,20,0,0,0-20-20h-8v40h8A20,20,0,0,0,148,180ZM40,112V40A16,16,0,0,1,56,24h96a8,8,0,0,1,5.66,2.34l56,56A8,8,0,0,1,216,88v24a8,8,0,0,1-16,0V96H152a8,8,0,0,1-8-8V40H56v72a8,8,0,0,1-16,0ZM160,80h28.69L160,51.31Z"/></symbol>
+<symbol id="i-file-zip" viewBox="0 0 256 256"><path d="M184,144H168a8,8,0,0,0-8,8v56a8,8,0,0,0,16,0v-8h8a28,28,0,0,0,0-56Zm0,40h-8V160h8a12,12,0,0,1,0,24Zm-48-32v56a8,8,0,0,1-16,0V152a8,8,0,0,1,16,0ZM96,208a8,8,0,0,1-8,8H56a8,8,0,0,1-7-12l25.16-44H56a8,8,0,0,1,0-16H88a8,8,0,0,1,7,12L69.79,200H88A8,8,0,0,1,96,208ZM213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40v72a8,8,0,0,0,16,0V40h88V88a8,8,0,0,0,8,8h48v16a8,8,0,0,0,16,0V88A8,8,0,0,0,213.66,82.34ZM160,80V51.31L188.69,80Z"/></symbol>
+<symbol id="i-file-video" viewBox="0 0 256 256"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40v72a8,8,0,0,0,16,0V40h88V88a8,8,0,0,0,8,8h48V216h-8a8,8,0,0,0,0,16h8a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM155.88,145a8,8,0,0,0-8.12.22l-19.95,12.46A16,16,0,0,0,112,144H48a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h64a16,16,0,0,0,15.81-13.68l19.95,12.46A8,8,0,0,0,160,216V152A8,8,0,0,0,155.88,145ZM112,208H48V160h64v48Zm32-6.43-16-10V176.43l16-10Z"/></symbol>
+<symbol id="i-tray-arrow-down" viewBox="0 0 256 256"><path d="M208,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm0,16V152h-28.7A15.86,15.86,0,0,0,168,156.69L148.69,176H107.31L88,156.69A15.86,15.86,0,0,0,76.69,152H48V48Zm0,160H48V168H76.69L96,187.31A15.86,15.86,0,0,0,107.31,192h41.38A15.86,15.86,0,0,0,160,187.31L179.31,168H208v40ZM90.34,125.66a8,8,0,0,1,11.32-11.32L120,132.69V72a8,8,0,0,1,16,0v60.69l18.34-18.35a8,8,0,0,1,11.32,11.32l-32,32a8,8,0,0,1-11.32,0Z"/></symbol>
+<symbol id="i-file" viewBox="0 0 256 256"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Z"/></symbol>
+<symbol id="i-file-image" viewBox="0 0 256 256"><path d="M110.66,147.56a8,8,0,0,0-13.32,0L76.49,178.85l-9.76-15.18a8,8,0,0,0-13.46,0l-36,56A8,8,0,0,0,24,232H152a8,8,0,0,0,6.66-12.44ZM38.65,216,60,182.79l9.63,15a8,8,0,0,0,13.39.11l21-31.47L137.05,216Zm175-133.66-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40v88a8,8,0,0,0,16,0V40h88V88a8,8,0,0,0,8,8h48V216h-8a8,8,0,0,0,0,16h8a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160Z"/></symbol>
+<symbol id="i-file-audio" viewBox="0 0 256 256"><path d="M99.06,128.61a8,8,0,0,0-8.72,1.73L68.69,152H48a8,8,0,0,0-8,8v40a8,8,0,0,0,8,8H68.69l21.65,21.66A8,8,0,0,0,104,224V136A8,8,0,0,0,99.06,128.61ZM88,204.69,77.66,194.34A8,8,0,0,0,72,192H56V168H72a8,8,0,0,0,5.66-2.34L88,155.31ZM152,180a40.55,40.55,0,0,1-20,34.91A8,8,0,0,1,124,201.09a24.49,24.49,0,0,0,0-42.18A8,8,0,0,1,132,145.09,40.55,40.55,0,0,1,152,180Zm61.66-97.66-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40v80a8,8,0,0,0,16,0V40h88V88a8,8,0,0,0,8,8h48V216H168a8,8,0,0,0,0,16h32a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160Z"/></symbol>
+</svg>
+<main id="app" data-view="start" data-pane="thread">
 
-  <div id="start">
-    <div class="card">
-      <input id="name" maxlength="24" placeholder="Your name" autocomplete="nickname">
+  <section id="v-start" class="view start">
+    <div class="brand"><span class="logo"><svg class="i" aria-hidden="true"><use href="#i-arrows-left-right"/></svg></span><span class="brand-name">DropLink</span></div>
+    <div class="hero">
+      <h1 class="redact" data-redact="Pass things between devices. Directly."></h1>
+      <p class="sub redact" data-redact="Peer-to-peer over WebRTC. Nothing is uploaded or stored." data-offset="1400"></p>
     </div>
-    <div class="card">
-      <button id="host" style="width:100%">Start a room</button>
+    <div class="field">
+      <label for="name">Your name</label>
+      <div class="input"><svg class="i" aria-hidden="true"><use href="#i-user"/></svg><input id="name" maxlength="24" autocomplete="nickname" spellcheck="false"></div>
     </div>
-    <div class="card">
-      <p style="margin-top:0">Or join a room</p>
-      <div class="row">
-        <input id="join-code" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="6-digit code" autocomplete="off">
-        <button id="join">Connect</button>
+    <button id="host" class="btn primary"><svg class="i" aria-hidden="true"><use href="#i-plus-circle"/></svg>Start a room</button>
+    <div class="or"><span>or join one</span></div>
+    <div class="join">
+      <div class="code-grid" role="group" aria-label="Room code"><input class="cell" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Room code character 1"><input class="cell" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Room code character 2"><input class="cell" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Room code character 3"><div class="dash"></div><input class="cell" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Room code character 4"><input class="cell" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Room code character 5"><input class="cell" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Room code character 6"></div>
+      <div class="hint">Letters and numbers, not case-sensitive</div>
+      <button id="join" class="btn" disabled>Connect<svg class="i" aria-hidden="true"><use href="#i-arrow-right"/></svg></button>
+      <p id="status" class="status" role="status"></p>
+    </div>
+    <footer class="foot"><svg class="i" aria-hidden="true"><use href="#i-lock-simple"/></svg><span class="redact" data-redact="End-to-end, device to device. Up to 8 people." data-offset="2600"></span></footer>
+  </section>
+
+  <section id="v-knock" class="view knock" hidden>
+    <div class="knock-av" id="knock-av"></div>
+    <h2>Knocking on <span id="knock-code" class="mono"></span></h2>
+    <p class="muted">The host needs to let you in. Keep this screen open.</p>
+    <button id="knock-cancel" class="btn">Cancel</button>
+  </section>
+
+  <section id="v-room" class="view room" hidden>
+    <aside class="side">
+      <div class="lobby-top">
+        <span class="open"><i class="dot"></i><span class="redact" data-redact="Room open" data-offset="900"></span></span>
+        <button id="leave-m" class="ghost"><svg class="i" aria-hidden="true"><use href="#i-sign-out"/></svg><span id="leave-m-t">Close</span></button>
       </div>
-      <p style="margin-bottom:0"><button id="scan" class="alt" style="width:100%">Scan QR code</button></p>
-    </div>
-  </div>
+      <div class="brand desk"><span class="logo"><svg class="i" aria-hidden="true"><use href="#i-arrows-left-right"/></svg></span><span class="brand-name">DropLink</span></div>
+      <div class="codeblock">
+        <div class="label">Room code</div>
+        <div class="code-row">
+          <div id="room-code" class="room-code"></div>
+          <button id="copy-code-m" class="icon-btn mob" aria-label="Copy room code"><svg class="i" aria-hidden="true"><use href="#i-copy"/></svg></button>
+        </div>
+        <div id="phonetic" class="phon"></div>
+        <button id="copy-code-d" class="btn sm desk"><svg class="i" aria-hidden="true"><use href="#i-copy"/></svg><span>Copy code</span></button>
+      </div>
+      <div id="req-wrap" hidden>
+        <div class="sec-head"><span>Wants to join</span><span id="req-n"></span></div>
+        <div id="req-list" class="list"></div>
+      </div>
+      <div>
+        <div class="sec-head"><span>In the room</span><span id="mem-n"></span></div>
+        <ul id="mem-list" class="list"></ul>
+      </div>
+      <div class="side-foot">
+        <button id="lobby-wait" class="btn" disabled><span class="redact" data-redact="Waiting for someone to join…" data-offset="2000"></span></button>
+        <button id="to-thread" class="btn mob" hidden>Back to thread<svg class="i" aria-hidden="true"><use href="#i-arrow-right"/></svg></button>
+        <button id="leave-d" class="btn desk"><svg class="i" aria-hidden="true"><use href="#i-sign-out"/></svg><span id="leave-d-t">Close room</span></button>
+      </div>
+    </aside>
 
-  <div id="scanner" class="card" hidden>
-    <video id="video" playsinline muted></video>
-    <p><button id="scan-cancel" class="alt" style="width:100%">Cancel</button></p>
-  </div>
+    <section class="main">
+      <header class="head-m">
+        <div class="head-row">
+          <span id="head-code" class="mono head-code"></span>
+          <button id="badge" class="btn sm" hidden></button>
+          <button id="leave-t" class="icon-btn" aria-label="Leave room"><svg class="i" aria-hidden="true"><use href="#i-sign-out"/></svg></button>
+        </div>
+        <div id="chips" class="chips"></div>
+      </header>
+      <header class="head-d">
+        <h2 class="redact" data-redact="Room thread" data-offset="500"></h2>
+        <span class="direct"><svg class="i" aria-hidden="true"><use href="#i-lock-simple"/></svg><span class="redact" data-redact="Direct · nothing leaves these devices" data-offset="1800"></span></span>
+      </header>
+      <div id="thread" class="thread" aria-live="polite"></div>
+      <form id="composer" class="composer" autocomplete="off">
+        <button type="button" id="attach" class="attach" aria-label="Attach files"><svg class="i m" aria-hidden="true"><use href="#i-plus"/></svg><svg class="i d" aria-hidden="true"><use href="#i-paperclip"/></svg><span>Attach</span></button>
+        <input id="files" type="file" multiple hidden>
+        <div class="pill">
+          <textarea id="text" rows="1" aria-label="Message"></textarea>
+          <button type="submit" id="send" class="send" aria-label="Send"><svg class="i" aria-hidden="true"><use href="#i-arrow-up"/></svg></button>
+        </div>
+      </form>
+      <div id="drop" class="drop" hidden><svg class="i" aria-hidden="true"><use href="#i-tray-arrow-down"/></svg><span>Drop to send to everyone</span></div>
+    </section>
+  </section>
 
-  <div id="waiting" class="card" hidden>
-    <div id="code"></div>
-    <div id="qr"></div>
-    <p class="status">Others join by entering this code or scanning the QR code. You approve each person.</p>
-  </div>
-
-  <p id="status" class="status" role="status"></p>
-
-  <div id="pending" class="card" hidden></div>
-
-  <div id="connected" hidden>
-    <p class="status" id="members"></p>
-    <div class="card">
-      <textarea id="text" rows="3" placeholder="Type or paste text to send"></textarea>
-      <p style="margin-bottom:0"><button id="send-text" style="width:100%">Send text</button></p>
-    </div>
-    <div class="card" id="drop">
-      <input id="files" type="file" multiple>
-      <p style="margin-bottom:0"><button id="send-files" style="width:100%">Send files</button></p>
-      <p class="status" style="margin:8px 0 0">or drop files here</p>
-    </div>
-    <div class="card" id="log" hidden></div>
-    <button id="leave" class="alt" style="width:100%">Leave room</button>
-  </div>
 </main>
 <script src="vendor/peerjs.min.js"></script>
-<script src="vendor/qrcode.js"></script>
-<script src="vendor/jsqr.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

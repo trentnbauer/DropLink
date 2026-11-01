@@ -3,46 +3,160 @@ const CHUNK = 16 * 1024; // safe size for every browser's data channel
 const BUFFER_HIGH = 4 * 1024 * 1024;
 const MAX_MEMBERS = 8; // everyone links to everyone, so keep rooms small
 const PREFIX = 'droplink-';
+const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no 0/O/1/I/L: 31 characters
+const CODE_RE = /^[A-HJKMNP-Z2-9]{6}$/;
 // STUN finds a direct path across the internet. Add a TURN entry here for networks that block direct links.
 const ICE = [{ urls: 'stun:stun.cloudflare.com:3478' }];
 
-let peer, myName, hostId, isHost, scanStream;
+let peer, myName, hostId, isHost, roomCode;
 const members = new Map(); // peer id -> { conn, name }: approved people we can talk to
 const pending = new Map(); // host only: peer id -> { conn, name } waiting for approval
 const allowed = new Set(); // ids the host announced as approved newcomers
-const incoming = new Map(); // peer id -> file being received
+const incoming = new Map(); // peer id -> { item, parts } file being received
+let sending = 0; // files currently being sent
 
-function show(...ids) {
-  for (const id of ['start', 'scanner', 'waiting', 'connected']) $(id).hidden = !ids.includes(id);
+// --- small DOM helpers ---
+
+function h(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+function icon(name, cls = '') {
+  const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  s.setAttribute('class', ('i ' + cls).trim());
+  s.setAttribute('aria-hidden', 'true');
+  const u = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+  u.setAttribute('href', '#i-' + name);
+  s.append(u);
+  return s;
+}
+const avatar = (name, cls = '') => h('span', 'av ' + cls, (name[0] || '?').toUpperCase());
+
+function fmt(n) {
+  return n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : n < 1073741824 ? `${(n / 1048576).toFixed(1)} MB` : `${(n / 1073741824).toFixed(1)} GB`;
+}
+
+// --- redaction: headings, status lines and system notes randomly black out or turn to *** ---
+
+const calm = matchMedia('(prefers-reduced-motion: reduce)');
+function redact(el, text, offset = 0) {
+  clearTimeout(el._t1); clearTimeout(el._t2);
+  el.textContent = '';
+  el.setAttribute('aria-label', text);
+  const words = text.split(' ');
+  const spans = words.map((w, i) => {
+    const s = h('span', 'rd', w);
+    s.setAttribute('aria-hidden', 'true');
+    el.append(s, i < words.length - 1 ? ' ' : '');
+    return s;
+  });
+  if (calm.matches) return;
+  const cycle = () => {
+    if (!el.isConnected) return; // gone for good, stop the timers
+    const n = Math.random() < 0.35 ? 2 : 1;
+    const start = Math.floor(Math.random() * Math.max(1, words.length - n + 1));
+    const stars = Math.random() >= 0.6;
+    const hit = spans.slice(start, start + n);
+    hit.forEach((s, k) => {
+      if (stars) { s.textContent = '*'.repeat(Math.max(3, words[start + k].length)); s.classList.add('star'); } else s.classList.add('bar');
+    });
+    el._t2 = setTimeout(() => {
+      hit.forEach((s, k) => { s.textContent = words[start + k]; s.className = 'rd'; });
+      el._t1 = setTimeout(cycle, 1600 + Math.random() * 2600);
+    }, 900 + Math.random() * 900);
+  };
+  el._t1 = setTimeout(cycle, 600 + offset + Math.random() * 3000);
+}
+document.querySelectorAll('.redact').forEach((el) => redact(el, el.dataset.redact, Number(el.dataset.offset || 0)));
+
+// --- views ---
+
+let pane = 'thread'; // phones show the lobby (side) or the thread, never both
+function setView(v) {
+  $('app').dataset.view = v;
+  for (const id of ['start', 'knock', 'room']) $('v-' + id).hidden = id !== v;
+}
+function setPane(p) {
+  pane = p;
+  $('app').dataset.pane = p;
+  if (p === 'thread') $('thread').scrollTop = $('thread').scrollHeight;
 }
 function status(msg, cls = '') {
   $('status').textContent = msg;
   $('status').className = 'status ' + cls;
 }
 
+const busy = () => sending > 0 || incoming.size > 0;
+function leave() {
+  if (busy() && !confirm('A transfer is in progress. Leave anyway?')) return;
+  reset(isHost ? 'Room closed.' : 'You left the room.');
+}
+
 function reset(msg, cls) {
-  stopScan();
   peer?.destroy();
-  peer = hostId = isHost = null;
+  peer = hostId = isHost = roomCode = null;
   members.clear(); pending.clear(); allowed.clear(); incoming.clear();
-  $('log').textContent = '';
-  $('log').hidden = true;
-  renderPending();
-  show('start');
+  sending = 0;
+  for (const it of thread) if (it.blobUrl) URL.revokeObjectURL(it.blobUrl);
+  thread.length = 0;
+  $('thread').textContent = '';
+  setView('start');
+  setPane('thread');
   status(msg || '', cls);
 }
 
-// --- name ---
+// --- name and code entry ---
 
-function loadName() {
-  try { $('name').value = localStorage.getItem('droplink-name') || ''; } catch {}
-}
+try { $('name').value = localStorage.getItem('droplink-name') || ''; } catch {}
 function takeName() {
   myName = $('name').value.trim().slice(0, 24);
   if (!myName) { status('Enter your name first.', 'bad'); $('name').focus(); return false; }
   try { localStorage.setItem('droplink-name', myName); } catch {}
   return true;
 }
+
+const cells = [...document.querySelectorAll('.cell')];
+const clean = (s) => [...s.toUpperCase()].filter((c) => ALPHABET.includes(c));
+const readCode = () => cells.map((c) => c.value).join('');
+const syncJoin = () => { $('join').disabled = readCode().length !== 6; };
+function fill(i, chars) {
+  chars.forEach((ch, k) => { if (cells[i + k]) cells[i + k].value = ch; });
+  cells[Math.min(i + chars.length, 5)].focus();
+  syncJoin();
+}
+cells.forEach((c, i) => {
+  c.addEventListener('focus', () => c.select());
+  c.addEventListener('input', () => {
+    const v = clean(c.value);
+    c.value = '';
+    if (v.length) fill(i, v); else syncJoin();
+  });
+  c.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const v = clean(e.clipboardData.getData('text'));
+    fill(v.length >= 6 ? 0 : i, v);
+  });
+  c.addEventListener('keydown', (e) => {
+    if (e.key === 'Backspace' && !c.value && i > 0) { e.preventDefault(); cells[i - 1].value = ''; cells[i - 1].focus(); syncJoin(); }
+    else if (e.key === 'ArrowLeft' && i > 0) cells[i - 1].focus();
+    else if (e.key === 'ArrowRight' && i < 5) cells[i + 1].focus();
+    else if (e.key === 'Enter' && !$('join').disabled) $('join').click();
+  });
+});
+
+function newCode() {
+  let out = '';
+  while (out.length < 6) {
+    const b = crypto.getRandomValues(new Uint8Array(1))[0];
+    if (b < 248) out += ALPHABET[b % 31]; // 248 = 31 * 8: reject the rest to avoid modulo bias
+  }
+  return out;
+}
+
+const NATO = { A: 'Alpha', B: 'Bravo', C: 'Charlie', D: 'Delta', E: 'Echo', F: 'Foxtrot', G: 'Golf', H: 'Hotel', J: 'Juliett', K: 'Kilo', M: 'Mike', N: 'November', P: 'Papa', Q: 'Quebec', R: 'Romeo', S: 'Sierra', T: 'Tango', U: 'Uniform', V: 'Victor', W: 'Whiskey', X: 'X-ray', Y: 'Yankee', Z: 'Zulu', 2: 'Two', 3: 'Three', 4: 'Four', 5: 'Five', 6: 'Six', 7: 'Seven', 8: 'Eight', 9: 'Nine' };
+const say = (s) => [...s].map((c) => NATO[c]).join(' · ');
 
 // --- room setup (the public PeerJS broker only introduces peers; data never goes through it) ---
 
@@ -61,25 +175,22 @@ function newPeer(id) {
 function startHost() {
   if (!takeName()) return;
   isHost = true;
-  const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000).padStart(6, '0');
-  peer = newPeer(PREFIX + code);
+  roomCode = newCode();
+  peer = newPeer(PREFIX + roomCode);
   peer.on('open', () => {
-    const q = qrcode(0, 'M');
-    q.addData(`${location.origin}${location.pathname}?c=${code}`);
-    q.make();
-    $('code').textContent = code;
-    $('qr').innerHTML = q.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
-    show('waiting', 'connected');
-    $('connected').hidden = false;
-    renderMembers();
-    status('Room open. Waiting for people…');
+    setView('room');
+    setPane('side');
+    renderRoom();
   });
 }
 
 function startJoin(code) {
   if (!takeName()) return;
-  status('Connecting…');
+  roomCode = code;
   hostId = PREFIX + code;
+  $('knock-av').textContent = (myName[0] || '?').toUpperCase();
+  $('knock-code').textContent = code.slice(0, 3) + '·' + code.slice(3);
+  setView('knock');
   peer = newPeer();
   peer.on('open', () => connectTo(hostId));
 }
@@ -94,28 +205,31 @@ const sendJson = (conn, m) => conn.open && conn.send(JSON.stringify(m));
 
 function wire(conn, outbound) {
   conn.outbound = outbound;
-  conn.on('open', () => sendJson(conn, { t: 'hi', name: myName }));
+  // Only the side that dialled greets first; the other side answers once it has decided to accept (host: after approval).
+  conn.on('open', () => outbound && sendJson(conn, { t: 'hi', name: myName }));
   conn.on('data', (d) => (typeof d === 'string' ? onControl(conn, JSON.parse(d)) : onChunk(conn, d)));
   conn.on('close', () => {
     pending.delete(conn.peer);
-    if (members.get(conn.peer)?.conn === conn) {
-      const name = members.get(conn.peer).name;
+    const m = members.get(conn.peer);
+    if (m?.conn === conn) {
       members.delete(conn.peer);
       incoming.delete(conn.peer);
-      renderMembers();
-      status(`${name} left.`);
-      if (!isHost && !members.size) reset('The room is closed.');
+      sysLine(`${m.name} left`);
+      if (!isHost && !members.size) return reset('The room is closed.');
+      if (isHost && !members.size) setPane('side');
     }
-    renderPending();
+    renderRoom();
   });
 }
 
 function addMember(conn, name) {
-  members.set(conn.peer, { conn, name: String(name).trim().slice(0, 24) || 'Guest' });
-  show('connected');
-  $('waiting').hidden = !isHost;
-  renderMembers();
-  status('Connected directly.', 'ok');
+  const first = !members.size;
+  const nm = String(name).trim().slice(0, 24) || 'Guest';
+  members.set(conn.peer, { conn, name: nm });
+  if ($('app').dataset.view !== 'room') setView('room');
+  if (first) setPane('thread');
+  sysLine(`${nm} joined`);
+  renderRoom();
 }
 
 function onControl(conn, m) {
@@ -127,7 +241,7 @@ function onControl(conn, m) {
     if (isHost) {
       if (members.size + pending.size >= MAX_MEMBERS - 1) return conn.close();
       pending.set(id, { conn, name: String(m.name).trim().slice(0, 24) || 'Guest' });
-      return renderPending();
+      return renderRoom();
     }
     if (allowed.has(id)) { addMember(conn, m.name); sendJson(conn, { t: 'hi', name: myName }); } else conn.close();
   } else if (m.t === 'welcome' && fromHost && conn.outbound) {
@@ -140,19 +254,16 @@ function onControl(conn, m) {
   } else if (members.has(id)) {
     const who = members.get(id).name;
     if (m.t === 'text') {
-      addItem(`${who} sent text`, null).querySelector('div').append(Object.assign(document.createElement('pre'), { textContent: m.v }));
+      addItem({ kind: 'text', dir: 'in', from: who, text: m.v });
     } else if (m.t === 'file') {
-      incoming.set(id, { meta: m, parts: [], got: 0, item: addItem(`Receiving ${m.name} from ${who}`, m.size) });
+      const item = addItem({ kind: 'file', dir: 'in', from: who, name: m.name, size: m.size, type: m.type, bytes: 0, state: 'active' });
+      incoming.set(id, { item, parts: [] });
     } else if (m.t === 'end' && incoming.has(id)) {
-      const { meta, parts, item } = incoming.get(id);
+      const { item, parts } = incoming.get(id);
       incoming.delete(id);
-      item.querySelector('progress')?.remove();
-      item.querySelector('small').textContent = `${who} sent ${meta.name} (${fmt(meta.size)})`;
-      item.querySelector('div').append(Object.assign(document.createElement('a'), {
-        href: URL.createObjectURL(new Blob(parts, { type: meta.type })),
-        download: meta.name,
-        textContent: `Save ${meta.name}`,
-      }));
+      item.blobUrl = URL.createObjectURL(new Blob(parts, { type: item.type }));
+      item.state = 'done';
+      update(item, true);
     }
   }
 }
@@ -161,26 +272,30 @@ function onChunk(conn, buf) {
   const f = incoming.get(conn.peer);
   if (!f) return;
   f.parts.push(buf);
-  f.got += buf.byteLength;
-  f.item.querySelector('progress').value = f.got;
+  f.item.bytes += buf.byteLength;
+  tick(f.item);
+  update(f.item);
 }
 
 function approve(id, ok) {
   const p = pending.get(id);
   if (!p) return;
   pending.delete(id);
-  if (!ok) { sendJson(p.conn, { t: 'denied' }); setTimeout(() => p.conn.close(), 300); return renderPending(); }
+  if (!ok) { sendJson(p.conn, { t: 'denied' }); setTimeout(() => p.conn.close(), 300); return renderRoom(); }
   for (const { conn } of members.values()) sendJson(conn, { t: 'joining', id });
   addMember(p.conn, p.name);
   sendJson(p.conn, { t: 'welcome', hostName: myName, peers: [...members.keys()].filter((k) => k !== id) });
-  renderPending();
 }
 
 const everyone = () => [...members.values()].filter((m) => m.conn.open);
 
 async function sendFile(file) {
   const targets = everyone();
-  const item = addItem(`Sending ${file.name} to ${targets.length} ${targets.length === 1 ? 'person' : 'people'}`, file.size);
+  if (!targets.length) return;
+  sending++;
+  const item = addItem({ kind: 'file', dir: 'out', name: file.name, size: file.size, type: file.type, bytes: 0, state: 'active', to: targets.map((t) => t.name) });
+  if (file.type.startsWith('image/')) item.blobUrl = URL.createObjectURL(file);
+  update(item, true);
   for (const { conn } of targets) sendJson(conn, { t: 'file', name: file.name, size: file.size, type: file.type });
   for (let off = 0; off < file.size; off += CHUNK) {
     const chunk = await file.slice(off, off + CHUNK).arrayBuffer();
@@ -188,114 +303,255 @@ async function sendFile(file) {
       while (conn.open && conn.dataChannel.bufferedAmount > BUFFER_HIGH) await new Promise((r) => setTimeout(r, 25));
       if (conn.open) conn.send(chunk);
     }
-    item.querySelector('progress').value = off + CHUNK;
+    item.bytes = Math.min(file.size, off + CHUNK);
+    tick(item);
+    update(item);
   }
   for (const { conn } of targets) sendJson(conn, { t: 'end' });
-  item.querySelector('progress').remove();
-  item.querySelector('small').textContent = `Sent ${file.name} (${fmt(file.size)})`;
+  item.state = 'done';
+  sending--;
+  update(item, true);
 }
 
 let queue = Promise.resolve(); // one file at a time keeps each stream unambiguous
 const enqueue = (files) => { for (const f of files) queue = queue.then(() => sendFile(f)); };
 
-// --- UI helpers ---
+// --- thread ---
 
-function fmt(n) {
-  return n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(1)} MB`;
+const thread = []; // { kind: 'text'|'file'|'system', dir, from, name, size, type, bytes, state, blobUrl, text, el, ui }
+
+function sysLine(text) {
+  const el = h('div', 'sys');
+  $('thread').append(el);
+  redact(el, text, Math.random() * 1500);
+  thread.push({ kind: 'system', el });
+  stick();
 }
 
-function addItem(title, size) {
-  $('log').hidden = false;
-  const el = document.createElement('div');
-  el.className = 'item';
-  const small = document.createElement('small');
-  small.textContent = title;
-  el.append(small, document.createElement('div'));
-  if (size) el.append(Object.assign(document.createElement('progress'), { max: size, value: 0 }));
-  $('log').prepend(el);
-  return el;
+function stick() {
+  const t = $('thread');
+  t.scrollTop = t.scrollHeight;
 }
 
-function renderMembers() {
-  const names = [myName + ' (you)', ...[...members.values()].map((m) => m.name)];
-  $('members').textContent = `In this room: ${names.join(', ')}`;
-}
-
-function renderPending() {
-  const box = $('pending');
-  box.textContent = '';
-  box.hidden = !pending.size;
-  for (const [id, p] of pending) {
-    const row = document.createElement('div');
-    row.className = 'pend';
-    row.append(Object.assign(document.createElement('span'), { textContent: `${p.name} wants to join` }));
-    const yes = Object.assign(document.createElement('button'), { textContent: 'Allow', onclick: () => approve(id, true) });
-    const no = Object.assign(document.createElement('button'), { textContent: 'Deny', className: 'alt', onclick: () => approve(id, false) });
-    row.append(yes, no);
-    box.append(row);
-  }
-}
-
-// --- QR scanning ---
-
-async function startScan() {
-  try {
-    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-  } catch {
-    return status('Camera unavailable. Type the code instead.', 'bad');
-  }
-  show('scanner');
-  const v = $('video');
-  v.srcObject = scanStream;
-  await v.play();
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  const tick = () => {
-    if (!scanStream) return;
-    if (v.videoWidth) {
-      canvas.width = v.videoWidth;
-      canvas.height = v.videoHeight;
-      ctx.drawImage(v, 0, 0);
-      const r = jsQR(ctx.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height);
-      const code = r && /(?:[?&]c=|^)(\d{6})$/.exec(r.data)?.[1];
-      if (code) { stopScan(); show('start'); $('join-code').value = code; return startJoin(code); }
-    }
-    requestAnimationFrame(tick);
+function copyBtn(label, getText) {
+  const b = h('button', 'link');
+  b.type = 'button';
+  b.append(icon('copy'), label);
+  b.onclick = async () => {
+    try { await navigator.clipboard.writeText(getText()); } catch { return; }
+    b.firstChild.replaceWith(icon('check'));
+    setTimeout(() => b.firstChild.replaceWith(icon('copy')), 1200);
   };
-  tick();
+  return b;
 }
 
-function stopScan() {
-  scanStream?.getTracks().forEach((t) => t.stop());
-  scanStream = null;
+function fileIcon(it) {
+  const ext = (it.name.split('.').pop() || '').toLowerCase();
+  if (ext === 'pdf') return 'file-pdf';
+  if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return 'file-zip';
+  if (it.type.startsWith('video/')) return 'file-video';
+  if (it.type.startsWith('image/')) return 'file-image';
+  if (it.type.startsWith('audio/')) return 'file-audio';
+  return 'file';
+}
+
+function addItem(it) {
+  const out = it.dir === 'out';
+  const row = h('div', 'row' + (out ? ' out' : ''));
+  if (!out) row.append(avatar(it.from));
+  const bubble = h('div', 'bubble' + (it.kind === 'file' ? ' file' : ''));
+  if (it.kind === 'text') {
+    bubble.append(h('pre', '', it.text), copyBtn('Copy', () => it.text));
+  } else {
+    it.ui = { pv: h('div', 'pv'), meta: h('div', 'fmeta'), track: h('div', 'track'), fill: h('i'), save: null };
+    it.ui.pv.hidden = true;
+    it.ui.track.append(it.ui.fill);
+    const info = h('div', 'finfo');
+    info.append(h('div', 'fname', it.name), it.ui.meta);
+    const frow = h('div', 'frow');
+    frow.append(icon(fileIcon(it), 'fico'), info);
+    it.ui.frow = frow;
+    bubble.append(it.ui.pv, frow, it.ui.track);
+    it.samples = [];
+    it.paint = 0;
+  }
+  row.append(bubble);
+  it.el = row;
+  thread.push(it);
+  $('thread').append(row);
+  if (it.kind === 'file') update(it, true);
+  stick();
+  return it;
+}
+
+// rolling transfer speed over roughly the last second
+function tick(it) {
+  const now = performance.now();
+  it.samples.push({ t: now, b: it.bytes });
+  while (it.samples.length > 2 && now - it.samples[0].t > 1000) it.samples.shift();
+  const a = it.samples[0];
+  it.speed = now - a.t > 200 ? ((it.bytes - a.b) / (now - a.t)) * 1000 : it.speed || 0;
+}
+
+function update(it, force) {
+  const now = performance.now();
+  if (!force && now - it.paint < 100) return; // chunks arrive far faster than the screen needs
+  it.paint = now;
+  const { meta, fill, track, pv, frow } = it.ui;
+  const done = it.state === 'done';
+  const pct = it.size ? Math.min(100, Math.floor((it.bytes / it.size) * 100)) : 100;
+  fill.style.width = (done ? 100 : pct) + '%';
+  track.hidden = done;
+  meta.textContent = '';
+  if (done && it.dir === 'out') {
+    meta.append(icon('checks'), `Delivered to ${it.to.length} · ${fmt(it.size)}`);
+  } else if (done) {
+    meta.textContent = fmt(it.size);
+  } else {
+    const speed = it.speed ? ` · ${fmt(it.speed)}/s` : '';
+    meta.textContent = `${it.dir === 'out' ? `To ${it.to.join(', ')} · ` : ''}${pct}% of ${fmt(it.size)}${speed}`;
+  }
+  if (it.blobUrl && !pv.firstChild && it.type.startsWith('image/')) {
+    pv.append(Object.assign(h('img'), { src: it.blobUrl, alt: '' }));
+    pv.hidden = false;
+  }
+  if (done && it.dir === 'in' && !it.ui.save) {
+    it.ui.save = Object.assign(h('a', 'save'), { href: it.blobUrl, download: it.name });
+    it.ui.save.append(icon('download-simple'), 'Save');
+    frow.append(it.ui.save);
+  }
+}
+
+// --- rendering the room (side panel, chips, requests, controls) ---
+
+function renderRoom() {
+  if (!roomCode) return;
+  const code = roomCode;
+  $('room-code').textContent = '';
+  $('room-code').append(code.slice(0, 3), Object.assign(h('span', 'dim', '·')), code.slice(3));
+  $('head-code').textContent = code.slice(0, 3) + '·' + code.slice(3);
+  const ph = $('phonetic');
+  ph.textContent = '';
+  ph.append(h('span', 'ph1', say(code.slice(0, 3))), h('span', 'sep', ' — '), h('span', 'ph2', say(code.slice(3))));
+
+  const total = members.size + 1;
+  $('mem-n').textContent = `${total} of ${MAX_MEMBERS}`;
+  const list = $('mem-list');
+  list.textContent = '';
+  const mine = h('li', 'person');
+  mine.append(avatar(myName, 'lg me'), Object.assign(h('span', 'who'), { textContent: myName }));
+  mine.lastChild.append(h('small', '', isHost ? ' · you, host' : ' · you'));
+  list.append(mine);
+  const chips = $('chips');
+  chips.textContent = '';
+  const me = h('span', 'chip me');
+  me.append(avatar(myName, 'me'), 'You');
+  chips.append(me);
+  for (const [id, m] of members) {
+    const li = h('li', 'person');
+    li.append(avatar(m.name, 'lg'), h('span', 'who', m.name));
+    if (id === hostId) li.lastChild.append(h('small', '', ' · host'));
+    list.append(li);
+    const c = h('span', 'chip');
+    c.append(avatar(m.name), m.name);
+    chips.append(c);
+  }
+
+  const reqs = $('req-list');
+  reqs.textContent = '';
+  $('req-wrap').hidden = !pending.size;
+  $('req-n').textContent = pending.size;
+  for (const [id, p] of pending) {
+    const row = h('div', 'person req');
+    row.append(avatar(p.name, 'lg'), h('span', 'who', p.name));
+    const no = h('button', 'icon-btn');
+    no.type = 'button';
+    no.setAttribute('aria-label', `Deny ${p.name}`);
+    no.append(icon('x'));
+    const yes = h('button', 'btn allow');
+    yes.type = 'button';
+    yes.setAttribute('aria-label', `Allow ${p.name}`);
+    yes.append(icon('check'), h('span', '', 'Allow'));
+    const decide = (ok) => { row.classList.add('fade'); setTimeout(() => approve(id, ok), 150); };
+    no.onclick = () => decide(false);
+    yes.onclick = () => decide(true);
+    row.append(no, yes);
+    reqs.append(row);
+  }
+  const badge = $('badge');
+  badge.hidden = !(isHost && pending.size);
+  badge.textContent = `${pending.size} waiting`;
+
+  $('lobby-wait').hidden = !(isHost && !members.size);
+  $('to-thread').hidden = !members.size;
+  $('leave-m-t').textContent = isHost ? 'Close' : 'Leave';
+  $('leave-d-t').textContent = isHost ? 'Close room' : 'Leave room';
+  const ready = everyone().length > 0;
+  for (const id of ['text', 'send', 'attach']) $(id).disabled = !ready;
 }
 
 // --- wiring ---
 
-loadName();
 $('host').onclick = startHost;
-$('join').onclick = () => /^\d{6}$/.test($('join-code').value) ? startJoin($('join-code').value) : status('Enter all 6 digits.', 'bad');
-$('join-code').onkeydown = (e) => e.key === 'Enter' && $('join').click();
-$('scan').onclick = () => takeName() && startScan();
-$('scan-cancel').onclick = () => { stopScan(); show('start'); };
-$('leave').onclick = () => reset('You left the room.');
-$('send-text').onclick = () => {
-  const v = $('text').value;
+$('join').onclick = () => (CODE_RE.test(readCode()) ? startJoin(readCode()) : status('Enter all 6 characters.', 'bad'));
+$('knock-cancel').onclick = () => reset();
+for (const id of ['leave-m', 'leave-d', 'leave-t']) $(id).onclick = leave;
+$('to-thread').onclick = () => setPane('thread');
+$('badge').onclick = () => setPane('side');
+for (const id of ['copy-code-m', 'copy-code-d']) {
+  $(id).onclick = async () => {
+    try { await navigator.clipboard.writeText(roomCode); } catch { return; }
+    const b = $(id);
+    const old = b.querySelector('svg');
+    old.replaceWith(icon('check'));
+    setTimeout(() => b.querySelector('svg').replaceWith(icon('copy')), 1200);
+  };
+}
+
+const text = $('text');
+const wide = matchMedia('(min-width: 760px)');
+const setPlaceholder = () => { text.placeholder = wide.matches ? 'Message, paste, or drop files — ⌘↵ to send' : 'Message or paste…'; };
+setPlaceholder();
+wide.addEventListener('change', setPlaceholder);
+text.addEventListener('input', () => { text.style.height = 'auto'; text.style.height = Math.min(text.scrollHeight, 120) + 'px'; });
+text.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); $('composer').requestSubmit(); } });
+text.addEventListener('paste', (e) => {
+  if (e.clipboardData.files.length) { e.preventDefault(); enqueue([...e.clipboardData.files]); }
+});
+$('composer').onsubmit = (e) => {
+  e.preventDefault();
+  const v = text.value.trim();
   const to = everyone();
   if (!v || !to.length) return;
-  for (const { conn } of to) sendJson(conn, { t: 'text', v });
-  addItem('You sent text', null).querySelector('div').append(Object.assign(document.createElement('pre'), { textContent: v }));
-  $('text').value = '';
+  for (const { conn } of to) sendJson(conn, { t: 'text', v: text.value });
+  addItem({ kind: 'text', dir: 'out', text: text.value });
+  text.value = '';
+  text.style.height = 'auto';
 };
-$('send-files').onclick = () => { if (everyone().length) enqueue([...$('files').files]); $('files').value = ''; };
-$('drop').ondragover = (e) => { e.preventDefault(); $('drop').classList.add('over'); };
-$('drop').ondragleave = () => $('drop').classList.remove('over');
-$('drop').ondrop = (e) => { e.preventDefault(); $('drop').classList.remove('over'); if (everyone().length) enqueue([...e.dataTransfer.files]); };
+$('attach').onclick = () => $('files').click();
+$('files').onchange = () => { enqueue([...$('files').files]); $('files').value = ''; };
 
-const preset = new URLSearchParams(location.search).get('c');
-if (/^\d{6}$/.test(preset || '')) {
+// drag and drop anywhere on the page while in a room with someone to send to
+let drags = 0;
+const hasFiles = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
+const canDrop = () => $('app').dataset.view === 'room' && everyone().length > 0 && !$('v-room').hidden;
+addEventListener('dragenter', (e) => { if (hasFiles(e) && canDrop()) { drags++; $('drop').hidden = false; } });
+addEventListener('dragover', (e) => { if (hasFiles(e)) e.preventDefault(); });
+addEventListener('dragleave', (e) => { if (hasFiles(e) && --drags <= 0) { drags = 0; $('drop').hidden = true; } });
+addEventListener('drop', (e) => {
+  if (!hasFiles(e)) return;
+  e.preventDefault();
+  drags = 0;
+  $('drop').hidden = true;
+  if (canDrop()) enqueue([...e.dataTransfer.files]);
+});
+
+// ?c= deep link still works; the code just pre-fills the entry cells
+const preset = (new URLSearchParams(location.search).get('c') || '').toUpperCase();
+if (CODE_RE.test(preset)) {
   history.replaceState(null, '', location.pathname); // keep the code out of history
-  $('join-code').value = preset;
+  fill(0, [...preset]);
   if ($('name').value) $('join').click();
-  else status('Enter your name, then press Connect.');
+  else { status('Enter your name, then press Connect.'); $('name').focus(); }
 }
+syncJoin();
