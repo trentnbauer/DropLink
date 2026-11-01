@@ -38,13 +38,17 @@ function fmt(n) {
   return n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : n < 1073741824 ? `${(n / 1048576).toFixed(1)} MB` : `${(n / 1073741824).toFixed(1)} GB`;
 }
 
-// --- redaction: headings, status lines and system notes randomly black out or turn to *** ---
+// --- redaction: only words that carry meaning for a privacy tool are ever blacked out or turned to *** ---
 
+const SENSITIVE = new Set(['device', 'devices', 'peer', 'peer-to-peer', 'someone', 'anyone', 'everyone', 'people', 'person', 'room', 'code', 'name', 'host', 'guest', 'file', 'files', 'text', 'message', 'messages', 'data', 'private', 'nothing', 'uploaded', 'stored', 'things']);
+const core = (w) => w.toLowerCase().replace(/[^a-z-]/g, '');
 const calm = matchMedia('(prefers-reduced-motion: reduce)');
-function redact(el, text, offset = 0) {
+// extra: more words to target, e.g. the person's name in "Bob joined"
+function redact(el, text, offset = 0, extra = []) {
   clearTimeout(el._t1); clearTimeout(el._t2);
   el.textContent = '';
   el.setAttribute('aria-label', text);
+  const targets = new Set(extra.map(core));
   const words = text.split(' ');
   const spans = words.map((w, i) => {
     const s = h('span', 'rd', w);
@@ -52,18 +56,23 @@ function redact(el, text, offset = 0) {
     el.append(s, i < words.length - 1 ? ' ' : '');
     return s;
   });
-  if (calm.matches) return;
+  const hits = words.map((w, i) => i).filter((i) => SENSITIVE.has(core(words[i])) || targets.has(core(words[i])));
+  if (calm.matches || !hits.length) return; // nothing worth hiding in this line
   const cycle = () => {
     if (!el.isConnected) return; // gone for good, stop the timers
-    const n = Math.random() < 0.35 ? 2 : 1;
-    const start = Math.floor(Math.random() * Math.max(1, words.length - n + 1));
+    const first = hits[Math.floor(Math.random() * hits.length)];
+    const pick = [first];
+    if (Math.random() < 0.35 && hits.includes(first + 1)) pick.push(first + 1); // two meaningful words side by side
     const stars = Math.random() >= 0.6;
-    const hit = spans.slice(start, start + n);
-    hit.forEach((s, k) => {
-      if (stars) { s.textContent = '*'.repeat(Math.max(3, words[start + k].length)); s.classList.add('star'); } else s.classList.add('bar');
-    });
+    for (const i of pick) {
+      if (stars) {
+        const [, lead, body, tail] = /^(\W*)(.*?)(\W*)$/.exec(words[i]);
+        spans[i].textContent = lead + '*'.repeat(Math.max(3, body.length)) + tail;
+        spans[i].classList.add('star');
+      } else spans[i].classList.add('bar');
+    }
     el._t2 = setTimeout(() => {
-      hit.forEach((s, k) => { s.textContent = words[start + k]; s.className = 'rd'; });
+      for (const i of pick) { spans[i].textContent = words[i]; spans[i].className = 'rd'; }
       el._t1 = setTimeout(cycle, 1600 + Math.random() * 2600);
     }, 900 + Math.random() * 900);
   };
@@ -214,7 +223,7 @@ function wire(conn, outbound) {
     if (m?.conn === conn) {
       members.delete(conn.peer);
       incoming.delete(conn.peer);
-      sysLine(`${m.name} left`);
+      sysLine(`${m.name} left`, m.name);
       if (!isHost && !members.size) return reset('The room is closed.');
       if (isHost && !members.size) setPane('side');
     }
@@ -228,7 +237,7 @@ function addMember(conn, name) {
   members.set(conn.peer, { conn, name: nm });
   if ($('app').dataset.view !== 'room') setView('room');
   if (first) setPane('thread');
-  sysLine(`${nm} joined`);
+  sysLine(`${nm} joined`, nm);
   renderRoom();
 }
 
@@ -320,10 +329,10 @@ const enqueue = (files) => { for (const f of files) queue = queue.then(() => sen
 
 const thread = []; // { kind: 'text'|'file'|'system', dir, from, name, size, type, bytes, state, blobUrl, text, el, ui }
 
-function sysLine(text) {
+function sysLine(text, who) {
   const el = h('div', 'sys');
   $('thread').append(el);
-  redact(el, text, Math.random() * 1500);
+  redact(el, text, Math.random() * 1500, who.split(' '));
   thread.push({ kind: 'system', el });
   stick();
 }
