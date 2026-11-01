@@ -2,7 +2,7 @@
 @font-face { font-family: 'IBM Plex Mono'; font-weight: 400; font-display: swap; src: url(fonts/ibm-plex-mono-latin-400-normal.woff2) format('woff2'); }
 @font-face { font-family: 'IBM Plex Mono'; font-weight: 500; font-display: swap; src: url(fonts/ibm-plex-mono-latin-500-normal.woff2) format('woff2'); }
 @font-face { font-family: 'IBM Plex Mono'; font-weight: 600; font-display: swap; src: url(fonts/ibm-plex-mono-latin-600-normal.woff2) format('woff2'); }
-@font-face { font-family: 'Special Elite'; font-weight: 400; font-display: swap; src: url(fonts/special-elite-latin-400-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Courier Prime'; font-weight: 700; font-display: swap; src: url(fonts/courier-prime-latin-700-normal.woff2) format('woff2'); }
 
 :root {
   --bg: #0f0e0c; --surface: #181714; --sidebar: #141310;
@@ -11,7 +11,7 @@
   --text: #e8e1cf; --ink: #e8e1cf; --stamp: #e0483a;
   --tint: #2a2620; --avatar2: #36322a;
   --font: 'IBM Plex Mono', ui-monospace, monospace;
-  --font-head: 'Special Elite', 'IBM Plex Mono', ui-monospace, monospace; /* typewriter on paper */
+  --font-head: 'Courier Prime', 'IBM Plex Mono', ui-monospace, monospace; /* clean typewriter, like a typed document */
 }
 
 * { box-sizing: border-box; }
@@ -24,7 +24,7 @@ body { margin: 0; background: var(--bg); color: var(--text); font: 400 15px/1.5 
 .muted { color: var(--muted); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 h1, h2, p { margin: 0; }
-h1, h2 { font-family: var(--font-head); font-weight: 400; font-synthesis: none; text-shadow: 0 0 1px rgba(232, 225, 207, .55); } /* slight ink bleed */
+h1, h2 { font-family: var(--font-head); font-weight: 700; font-synthesis: none; }
 button, input, textarea { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
@@ -53,7 +53,7 @@ button, input, textarea { font: inherit; color: inherit; }
 .logo { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--ink); color: var(--stamp); display: grid; place-items: center; font-size: 16px; }
 .brand-name { font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
 .hero { display: flex; flex-direction: column; gap: 8px; }
-.hero h1 { font-size: 30px; line-height: 1.2; letter-spacing: .01em; text-transform: uppercase; text-wrap: pretty; }
+.hero h1 { font-size: 28px; line-height: 1.2; letter-spacing: .01em; text-transform: uppercase; text-wrap: pretty; }
 .sub { color: var(--muted); text-wrap: pretty; }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label { font-size: 12px; color: var(--muted); }

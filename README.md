@@ -14,6 +14,6 @@ via `.github/workflows/pages.yml` (also runnable by hand from the Actions tab).
 
 ## Notes
 - No build step. The theme is "4b Redacted, dark": colours are the CSS variables at the top of `style.css`.
-- Everything is self-hosted for the strict CSP: PeerJS in `vendor/`, IBM Plex Mono and Special Elite (headings) in `fonts/`, Phosphor icons inlined in `index.html`.
+- Everything is self-hosted for the strict CSP: PeerJS in `vendor/`, IBM Plex Mono and Courier Prime (headings) in `fonts/`, Phosphor icons inlined in `index.html`.
 - Strict networks may need a TURN relay: add it to `ICE` at the top of `app.js`.
 - To use your own broker, pass `{ host, port, path, secure }` to `new Peer(...)` in `app.js`.
