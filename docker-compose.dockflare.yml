@@ -6,7 +6,7 @@
 # forward UDP+TCP 3478 and UDP 49160-49300 on your router to this machine (see README).
 services:
   app:
-    build: .
+    image: ghcr.io/trentnbauer/droplink:${DROPLINK_VERSION:-latest}
     restart: unless-stopped
     read_only: true # nothing is ever written to disk
     cap_drop: [ALL]

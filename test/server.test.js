@@ -34,3 +34,8 @@ test('serves the app and refuses anything outside public/', async () => {
   }
   assert.equal((await fetch(`${base}/healthz`)).status, 200);
 });
+
+test('reports its version', async () => {
+  const { version } = await fetch(`${base}/version`).then((r) => r.json());
+  assert.match(version, /^\d+\.\d+\.\d+-dev$/); // no APP_VERSION in tests: falls back to package.json
+});

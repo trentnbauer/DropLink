@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { createHmac } from 'node:crypto';
 import { extname, join, normalize } from 'node:path';
@@ -6,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 
 const PORT = Number(process.env.PORT || 3000);
 const { TURN_HOST, TURN_SECRET, ICE_POLICY } = process.env;
+// Released images get APP_VERSION from the release tag; anything else reports the package version as a dev build.
+const VERSION = process.env.APP_VERSION || `${JSON.parse(readFileSync(new URL('./package.json', import.meta.url))).version}-dev`;
 const TURN_PORT = process.env.TURN_PORT || '3478';
 const TURN_TTL_S = Number(process.env.TURN_TTL || 86400); // a relay session ends when its credentials expire
 const ROOT = fileURLToPath(new URL('./public/', import.meta.url));
@@ -31,6 +34,7 @@ export const server = createServer(async (req, res) => {
   let path;
   try { path = decodeURIComponent(new URL(req.url, 'http://x').pathname); } catch { return res.writeHead(400).end(); }
   if (path === '/healthz') return res.writeHead(200).end('ok');
+  if (path === '/version') return res.writeHead(200, { ...HEADERS, 'Cache-Control': 'no-store', 'Content-Type': 'application/json' }).end(JSON.stringify({ version: VERSION }));
   if (path === '/config.json') {
     return res.writeHead(200, { ...HEADERS, 'Cache-Control': 'no-store', 'Content-Type': 'application/json' }).end(JSON.stringify(iceConfig()));
   }
@@ -43,4 +47,4 @@ export const server = createServer(async (req, res) => {
 });
 
 if (!TURN_HOST || !TURN_SECRET) console.warn('TURN_HOST / TURN_SECRET not set: serving STUN only, devices on strict networks will not connect.');
-server.listen(PORT, () => console.log(`droplink listening on :${PORT}`));
+server.listen(PORT, () => console.log(`droplink ${VERSION} listening on :${PORT}`));
