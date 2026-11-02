@@ -17,8 +17,8 @@ docker compose up -d --build
 The web app is on port `WEBPORT` (default 3000). Put it behind a Cloudflare Tunnel or any reverse proxy. It must be served over
 HTTPS for browsers to allow everything it needs.
 
-- **Dockflare:** layer the labels on with `docker compose -f docker-compose.yml -f docker-compose.dockflare.yml up -d --build`
-  and set `DOMAIN`, `SUBDOMAIN` (with its trailing dot) and `HOSTNAME` in `.env`. Dockflare then creates the hostname and tunnel route.
+- **Dockflare:** use the complete `docker-compose.dockflare.yml` instead of `docker-compose.yml` (web app, relay and Dockflare labels in one file):
+  `docker compose -f docker-compose.dockflare.yml up -d --build`. Set `DOMAIN`, `SUBDOMAIN` (with its trailing dot) and `HOSTNAME` in `.env`. Dockflare then creates the hostname and tunnel route.
 - **Plain Cloudflare Tunnel:** `docker compose --profile tunnel up -d` with `TUNNEL_TOKEN` set, hostname pointing at `http://app:3000`.
 
 Two containers:
