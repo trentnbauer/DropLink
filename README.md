@@ -45,8 +45,10 @@ To test the relay, set `ICE_POLICY=relay` in `.env` and restart: every connectio
 
 ## Versions and releases
 Images are built by `.github/workflows/docker.yml` (it runs the tests first, and builds for amd64 and arm64).
-- **Release:** on GitHub, Releases > Draft a new release, create a tag like `v0.3.0` and publish. The image is tagged `0.3.0`, `0.3`, `0` and `latest`.
-- **Every merge to `main`** publishes `latest` and `sha-<commit>`. Pull requests only test and build, they do not publish.
-- **Pin a version** with `DROPLINK_VERSION=0.3.0` in `.env`. The default is `latest`.
+- **Automatic:** every merge to `main` gets the next version number (`0.3.0`, `0.3.1`, `0.3.2`, ...), is tagged `vX.Y.Z`, published as a GitHub release, and the image is tagged `X.Y.Z`, `X.Y`, `X` and `latest` (plus `sha-<commit>`).
+- **Bump the minor or major version** by editing `version` in `package.json` (for example `0.4.0`). The patch number is always automatic.
+- **A tag pushed by hand** (for example `v1.0.0`) builds that exact version. Pre-release tags such as `v1.0.0-rc.1` get only their own tag, never `latest`.
+- **Pull requests** only test and build, they do not publish, and report themselves as `dev-<commit>`.
+- **Pin a version** with `DROPLINK_VERSION=0.3.1` in `.env`. The default is `latest`.
 - **Which version is running:** shown bottom right of the start screen, at `/version`, in the startup log, and in the image labels (`docker inspect`).
 - **First time:** the package is private until you make it public (GitHub > your profile > Packages > droplink > Package settings > Change visibility), or run `docker login ghcr.io` on the host.

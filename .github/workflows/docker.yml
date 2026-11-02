@@ -10,7 +10,10 @@ on:
 
 permissions:
   contents: read
-  packages: write
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
@@ -25,8 +28,18 @@ jobs:
   image:
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # tag and release the version
+      packages: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # tags are needed to work out the next version
+
+      # push to main -> next version (0.3.0, 0.3.1, ...), release tag vX.Y.Z -> that version, otherwise dev-<sha>
+      - id: ver
+        run: ./scripts/next-version.sh "${{ github.event_name }}" "${{ github.ref_type }}" "${{ github.ref_name }}" "${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
 
@@ -38,24 +51,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # A release tag v1.2.3 gives 1.2.3, 1.2, 1 and latest. Pushes to main give latest and sha-<short>.
       - id: meta
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository_owner }}/droplink
           flavor: latest=false
+          labels: |
+            org.opencontainers.image.version=${{ steps.ver.outputs.version }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=raw,value=latest,enable=${{ github.ref_type == 'tag' || github.ref_name == github.event.repository.default_branch }}
+            type=raw,value=${{ steps.ver.outputs.version }},enable=${{ !startsWith(steps.ver.outputs.version, 'dev-') }}
+            type=raw,value=${{ steps.ver.outputs.minor }},enable=${{ steps.ver.outputs.stable == 'true' }}
+            type=raw,value=${{ steps.ver.outputs.major }},enable=${{ steps.ver.outputs.stable == 'true' }}
+            type=raw,value=latest,enable=${{ steps.ver.outputs.stable == 'true' }}
             type=sha,format=short,enable=${{ github.ref_type != 'tag' }}
-
-      - name: Work out the version baked into the image
-        id: ver
-        run: |
-          if [ "${{ github.ref_type }}" = "tag" ]; then v="${GITHUB_REF_NAME#v}"; else v="dev-${GITHUB_SHA::7}"; fi
-          echo "version=$v" >> "$GITHUB_OUTPUT"
 
       - uses: docker/build-push-action@v6
         with:
@@ -67,3 +75,10 @@ jobs:
           build-args: APP_VERSION=${{ steps.ver.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # Only after the image is published, so a tag never points at a version that failed to build.
+      - name: Tag and release the version
+        if: steps.ver.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "v${{ steps.ver.outputs.version }}" --target "${{ github.sha }}" --title "v${{ steps.ver.outputs.version }}" --generate-notes
