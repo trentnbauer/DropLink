@@ -1,0 +1,16 @@
+# Dockflare labels for the web app. Layer it over the base stack:
+#   docker compose -f docker-compose.yml -f docker-compose.dockflare.yml up -d --build
+# (or set COMPOSE_FILE=docker-compose.yml:docker-compose.dockflare.yml in .env and use plain `docker compose`)
+#
+# Needs in .env: DOMAIN, SUBDOMAIN (with its trailing dot), HOSTNAME. See .env.example.
+# Only the web app is exposed. The TURN relay cannot go through a tunnel: forward its ports on the router instead.
+services:
+  app:
+    labels:
+      - dockflare.enable=true
+      - dockflare.0.hostname=${SUBDOMAIN:-droplink.}${DOMAIN:?set DOMAIN in .env}
+      - dockflare.0.service=http://${HOSTNAME:-localhost}:${WEBPORT:-3000}
+      - dockflare.0.access.policy=${DF_POLICY:-tld_default}
+      - dockflare.0.tunnel.name=${DF_APPNAME:-DropLink}
+      - dockflare.0.zonename=${DOMAIN:?set DOMAIN in .env}
+      - dockflare.0.no_tls_verify=${NO_TLS_VERIFY:-false}

@@ -14,9 +14,12 @@ and a small TURN relay carries the (encrypted) traffic for networks that cannot 
 cp .env.example .env     # set TURN_HOST and TURN_SECRET (openssl rand -hex 24)
 docker compose up -d --build
 ```
-The web app is on port `WEBPORT` (default 3000). Put it behind a Cloudflare Tunnel (`docker compose --profile tunnel up -d`
-with `TUNNEL_TOKEN` set, hostname pointing at `http://app:3000`) or any reverse proxy. It must be served over HTTPS for
-browsers to allow everything it needs.
+The web app is on port `WEBPORT` (default 3000). Put it behind a Cloudflare Tunnel or any reverse proxy. It must be served over
+HTTPS for browsers to allow everything it needs.
+
+- **Dockflare:** layer the labels on with `docker compose -f docker-compose.yml -f docker-compose.dockflare.yml up -d --build`
+  and set `DOMAIN`, `SUBDOMAIN` (with its trailing dot) and `HOSTNAME` in `.env`. Dockflare then creates the hostname and tunnel route.
+- **Plain Cloudflare Tunnel:** `docker compose --profile tunnel up -d` with `TUNNEL_TOKEN` set, hostname pointing at `http://app:3000`.
 
 Two containers:
 - **app**: serves the page and hands each device short-lived relay credentials at `/config.json` (valid 24 hours, derived from `TURN_SECRET`). Read-only filesystem, nothing written to disk.
