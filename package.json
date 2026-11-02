@@ -1,0 +1,11 @@
+{
+  "name": "droplink",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Device-to-device text and file sharing. Static app plus short-lived TURN credentials.",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/"
+  }
+}
