@@ -1,0 +1,47 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    read_only: true # nothing is ever written to disk
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    ports:
+      - ${WEBPORT:-3000}:3000
+    environment:
+      TURN_HOST: ${TURN_HOST:?set TURN_HOST in .env}
+      TURN_SECRET: ${TURN_SECRET:?set TURN_SECRET in .env}
+      TURN_PORT: ${TURN_PORT:-3478}
+      ICE_POLICY: ${ICE_POLICY:-} # "relay" forces all traffic through the relay, handy to test it
+
+  # TURN relay for devices that cannot connect directly. Host networking is how coturn is normally run: it needs
+  # UDP/TCP 3478 and UDP 49160-49300 reachable from the internet (forward them on your router).
+  turn:
+    image: coturn/coturn:4.6.3
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      TURN_SECRET: ${TURN_SECRET:?set TURN_SECRET in .env}
+      TURN_EXTERNAL_IP: ${TURN_EXTERNAL_IP:-}
+      TURN_ALLOW_PRIVATE: ${TURN_ALLOW_PRIVATE:-}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        ARGS="-n --log-file=stdout --realm=droplink --fingerprint --use-auth-secret --static-auth-secret=$$TURN_SECRET --no-tls --no-cli --no-multicast-peers --listening-port=3478 --min-port=49160 --max-port=49300"
+        [ -n "$$TURN_EXTERNAL_IP" ] && ARGS="$$ARGS --external-ip=$$TURN_EXTERNAL_IP"
+        # credentials are public, so do not let them reach into the home network through the relay
+        if [ -z "$$TURN_ALLOW_PRIVATE" ]; then
+          for r in 10.0.0.0-10.255.255.255 172.16.0.0-172.31.255.255 192.168.0.0-192.168.255.255 169.254.0.0-169.254.255.255 127.0.0.0-127.255.255.255; do
+            ARGS="$$ARGS --denied-peer-ip=$$r"
+          done
+        fi
+        exec turnserver $$ARGS
+
+  # Optional: expose the web app through a Cloudflare Tunnel. Point the tunnel's public hostname at http://app:3000
+  cloudflared:
+    profiles: [tunnel]
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN}

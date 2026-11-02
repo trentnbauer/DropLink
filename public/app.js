@@ -5,8 +5,11 @@ const MAX_MEMBERS = 8; // everyone links to everyone, so keep rooms small
 const PREFIX = 'droplink-';
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no 0/O/1/I/L: 31 characters
 const CODE_RE = /^[A-HJKMNP-Z2-9]{6}$/;
-// STUN finds a direct path across the internet. Add a TURN entry here for networks that block direct links.
-const ICE = [{ urls: 'stun:stun.cloudflare.com:3478' }];
+// Connection settings come from config.json (STUN finds a direct path; a TURN relay is the fallback for networks that block direct links).
+let ICE = { iceServers: [{ urls: 'stun:stun.cloudflare.com:3478' }] };
+const iceReady = fetch('config.json').then((r) => (r.ok ? r.json() : {})).then((c) => { ICE = { ...ICE, ...c }; }).catch(() => {});
+const CONNECT_TIMEOUT_MS = 20000;
+let connectTimer;
 
 let peer, myName, hostId, isHost, roomCode;
 const members = new Map(); // peer id -> { conn, name }: approved people we can talk to
@@ -87,7 +90,7 @@ document.querySelectorAll('.redact').forEach((el) => redact(el, el.dataset.redac
 let pane = 'thread'; // phones show the thread or the room details (code, people, requests), never both
 function setView(v) {
   $('app').dataset.view = v;
-  for (const id of ['start', 'room']) $('v-' + id).hidden = id !== v;
+  for (const id of ['start', 'knock', 'room']) $('v-' + id).hidden = id !== v;
 }
 function setPane(p) {
   pane = p;
@@ -106,6 +109,7 @@ function leave() {
 }
 
 function reset(msg, cls) {
+  clearTimeout(connectTimer);
   peer?.destroy();
   peer = hostId = isHost = roomCode = null;
   members.clear(); pending.clear(); allowed.clear(); incoming.clear();
@@ -174,7 +178,7 @@ const say = (s) => [...s].map((c) => NATO[c]).join(' · ');
 // --- room setup (the public PeerJS broker only introduces peers; data never goes through it) ---
 
 function newPeer(id) {
-  const p = new Peer(id, { config: { iceServers: ICE } });
+  const p = new Peer(id, { config: { iceServers: ICE.iceServers, iceTransportPolicy: ICE.iceTransportPolicy || 'all' } });
   p.on('connection', (conn) => wire(conn, false));
   p.on('error', (e) => {
     if (e.type === 'unavailable-id' && isHost) { p.destroy(); return startHost(); }
@@ -202,12 +206,16 @@ function startJoin(code) {
   if (!takeName()) return;
   roomCode = code;
   hostId = PREFIX + code;
-  setView('room');
-  setPane('thread');
-  sysLine('Waiting for the host to let you in…');
-  renderRoom();
+  status('Connecting…');
   peer = newPeer();
   peer.on('open', () => connectTo(hostId));
+  connectTimer = setTimeout(failConnect, CONNECT_TIMEOUT_MS);
+}
+
+// The broker found the room but the two devices never linked up: almost always a network that needs a TURN relay.
+function failConnect() {
+  if (members.size || $('app').dataset.view !== 'start') return; // already in, or knocking (the host answered)
+  reset("Couldn't connect to the host. One of the networks may block direct connections and need a TURN relay (see README).", 'bad');
 }
 
 function connectTo(id) {
@@ -222,6 +230,7 @@ function wire(conn, outbound) {
   conn.outbound = outbound;
   // Only the side that dialled greets first; the other side answers once it has decided to accept (host: after approval).
   conn.on('open', () => outbound && sendJson(conn, { t: 'hi', name: myName }));
+  conn.on('iceStateChanged', (st) => { if (st === 'failed' && conn.peer === hostId && conn.outbound) failConnect(); });
   conn.on('data', (d) => (typeof d === 'string' ? onControl(conn, JSON.parse(d)) : onChunk(conn, d)));
   conn.on('close', () => {
     pending.delete(conn.peer);
@@ -238,7 +247,9 @@ function wire(conn, outbound) {
 
 function addMember(conn, name) {
   const nm = String(name).trim().slice(0, 24) || 'Guest';
+  clearTimeout(connectTimer);
   members.set(conn.peer, { conn, name: nm });
+  if ($('app').dataset.view !== 'room') { setView('room'); setPane('thread'); } // a guest leaves the knocking screen
   sysLine(`${nm} joined`, nm);
   renderRoom();
   // hand the newcomer everything this device has sent so far (queued behind any transfer already running)
@@ -255,12 +266,18 @@ function onControl(conn, m) {
       if (members.size + pending.size >= MAX_MEMBERS - 1) return conn.close();
       pending.set(id, { conn, name: String(m.name).trim().slice(0, 24) || 'Guest' });
       if ($('auto').checked) return approve(id, true);
+      sendJson(conn, { t: 'knock' }); // tell the guest to wait for the host
       return renderRoom();
     }
     if (allowed.has(id)) { addMember(conn, m.name); sendJson(conn, { t: 'hi', name: myName }); } else conn.close();
   } else if (m.t === 'welcome' && fromHost && conn.outbound) {
     addMember(conn, m.hostName);
     for (const pid of m.peers) if (pid !== peer.id) connectTo(pid);
+  } else if (m.t === 'knock' && fromHost && conn.outbound) {
+    clearTimeout(connectTimer);
+    $('knock-av').textContent = (myName[0] || '?').toUpperCase();
+    $('knock-code').textContent = roomCode.slice(0, 3) + '·' + roomCode.slice(3);
+    setView('knock');
   } else if (m.t === 'denied' && fromHost) {
     reset('The host declined your request.', 'bad');
   } else if (m.t === 'joining' && fromHost) {
@@ -539,11 +556,16 @@ function renderRoom() {
 
 // --- wiring ---
 
-$('host').onclick = startHost;
-$('join').onclick = () => (CODE_RE.test(readCode()) ? startJoin(readCode()) : status('Enter all 6 characters.', 'bad'));
+$('host').onclick = async () => { await iceReady; startHost(); };
+$('join').onclick = async () => {
+  if (!CODE_RE.test(readCode())) return status('Enter all 6 characters.', 'bad');
+  await iceReady;
+  startJoin(readCode());
+};
 for (const id of ['leave-m', 'leave-d', 'leave-t']) $(id).onclick = leave;
 $('to-thread').onclick = () => setPane('thread');
 $('badge').onclick = () => setPane('side');
+$('knock-cancel').onclick = () => reset();
 $('head-code').onclick = () => setPane('side');
 $('auto').onchange = () => { if ($('auto').checked) for (const id of [...pending.keys()]) approve(id, true); };
 for (const id of ['copy-code-m', 'copy-code-d']) {
