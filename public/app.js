@@ -8,6 +8,7 @@ const CODE_RE = /^[A-HJKMNP-Z2-9]{6}$/;
 // Connection settings come from config.json (STUN finds a direct path; a TURN relay is the fallback for networks that block direct links).
 let ICE = { iceServers: [{ urls: 'stun:stun.cloudflare.com:3478' }] };
 const iceReady = fetch('config.json').then((r) => (r.ok ? r.json() : {})).then((c) => { ICE = { ...ICE, ...c }; }).catch(() => {});
+fetch('version').then((r) => r.json()).then((v) => { $('ver').textContent = 'v' + v.version.replace(/^v/, ''); }).catch(() => {});
 const CONNECT_TIMEOUT_MS = 20000;
 let connectTimer;
 

@@ -10,15 +10,17 @@ and a small TURN relay carries the (encrypted) traffic for networks that cannot 
 - Held items live in the sender's open tab. If a sender closes the page, what only they had is gone.
 
 ## Run it
+You do not build anything locally: GitHub builds the image and publishes it to `ghcr.io/trentnbauer/droplink` (see Versions below).
 ```
 cp .env.example .env     # set TURN_HOST and TURN_SECRET (openssl rand -hex 24)
-docker compose up -d --build
+docker compose up -d
 ```
+To update later: `docker compose pull && docker compose up -d`. In Portainer, redeploy the stack with "Re-pull image" ticked.
 The web app is on port `WEBPORT` (default 3000). Put it behind a Cloudflare Tunnel or any reverse proxy. It must be served over
 HTTPS for browsers to allow everything it needs.
 
 - **Dockflare:** use the complete `docker-compose.dockflare.yml` instead of `docker-compose.yml` (web app, relay and Dockflare labels in one file):
-  `docker compose -f docker-compose.dockflare.yml up -d --build`. Set `DOMAIN`, `SUBDOMAIN` (with its trailing dot) and `HOSTNAME` in `.env`. Dockflare then creates the hostname and tunnel route.
+  `docker compose -f docker-compose.dockflare.yml up -d`. Set `DOMAIN`, `SUBDOMAIN` (with its trailing dot) and `HOSTNAME` in `.env`. Dockflare then creates the hostname and tunnel route.
 - **Plain Cloudflare Tunnel:** `docker compose --profile tunnel up -d` with `TUNNEL_TOKEN` set, hostname pointing at `http://app:3000`.
 
 Two containers:
@@ -40,3 +42,11 @@ To test the relay, set `ICE_POLICY=relay` in `.env` and restart: every connectio
 - Devices find each other through the public PeerJS broker (`0.peerjs.com`), which sees connection setup (IP addresses) but never files or text. To use your own broker, pass `{ host, port, path, secure }` to `new Peer(...)` in `public/app.js` and add it to the CSP in `public/index.html`.
 - No build step. The theme is "4b Redacted, dark": colours are the CSS variables at the top of `public/style.css`. Fonts and icons are self-hosted for the strict CSP.
 - Tests: `npm test` (server only; no dependencies to install).
+
+## Versions and releases
+Images are built by `.github/workflows/docker.yml` (it runs the tests first, and builds for amd64 and arm64).
+- **Release:** on GitHub, Releases > Draft a new release, create a tag like `v0.3.0` and publish. The image is tagged `0.3.0`, `0.3`, `0` and `latest`.
+- **Every merge to `main`** publishes `latest` and `sha-<commit>`. Pull requests only test and build, they do not publish.
+- **Pin a version** with `DROPLINK_VERSION=0.3.0` in `.env`. The default is `latest`.
+- **Which version is running:** shown bottom right of the start screen, at `/version`, in the startup log, and in the image labels (`docker inspect`).
+- **First time:** the package is private until you make it public (GitHub > your profile > Packages > droplink > Package settings > Change visibility), or run `docker login ghcr.io` on the host.

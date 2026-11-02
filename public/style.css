@@ -73,6 +73,7 @@ button, input, textarea { font: inherit; color: inherit; }
 .hint { font-size: 12px; color: var(--dim); }
 .join .btn { font-size: 14px; padding: 12px; }
 .join .btn:not(:disabled) { border-color: var(--ink); }
+.ver { margin-left: auto; padding-left: 12px; }
 .foot { margin-top: auto; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--dim); }
 
 /* knock */
