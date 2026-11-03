@@ -323,6 +323,7 @@ function toStart(msg, cls) {
   for (const it of thread) if (it.blobUrl) URL.revokeObjectURL(it.blobUrl);
   thread.length = 0;
   for (const e of $$('#thread > .msg, #thread > .sys')) e.remove();
+  reqCards.clear();
   if (ct) stopCountdown();
   setView('start');
   $('hero').style.visibility = '';
@@ -723,7 +724,7 @@ function approve(id, ok) {
   const p = pending.get(id);
   if (!p) return;
   pending.delete(id);
-  if (!ok) { sendJson(p.conn, { t: 'denied' }); setTimeout(() => p.conn.close(), 300); return renderRoom(); }
+  if (!ok) { sendJson(p.conn, { t: 'denied' }); setTimeout(() => p.conn.close(), 300); sysLine(`${p.name} denied`); return renderRoom(); }
   allowed.add(id);
   toAll({ t: 'joining', id });
   sendJson(p.conn, { t: 'welcome', name: p.name, host: peer.id, peers: [peer.id, ...members.keys()], max: maxSlots, locked });
@@ -1000,6 +1001,41 @@ function person(name, host, me) {
   return r;
 }
 
+function requestRow(id, name) {
+  const r = person(name);
+  r.style.setProperty('--c', 'var(--wait)');
+  const no = h('button', 'yn');
+  no.setAttribute('aria-label', `Deny ${name}`);
+  no.append(icon('x-b'));
+  const yes = h('button', 'yn yes');
+  yes.setAttribute('aria-label', `Let ${name} in`);
+  yes.append(icon('check-b'));
+  no.onclick = () => approve(id, false);
+  yes.onclick = () => approve(id, true);
+  r.append(no, yes);
+  return r;
+}
+
+// host on a phone: each knock also shows up in the thread as a card, gone once answered (desktop has them in the rail)
+const reqCards = new Map(); // peer id -> card in the thread
+function syncRequestCards() {
+  for (const [id, card] of reqCards) if (!isHost || !pending.has(id)) { card.remove(); reqCards.delete(id); }
+  if (!isHost) return;
+  for (const [id, p] of pending) {
+    if (reqCards.has(id)) continue;
+    const card = h('div', 'msg req');
+    card.style.setProperty('--c', 'var(--wait)');
+    const meta = h('div', 'meta lb');
+    meta.append(h('i', 'sq s8'), h('span', 'nm', p.name), h('span', '', `· wants to join · ${time()}`));
+    const box = h('div', 'fcard req-card');
+    box.append(requestRow(id, p.name));
+    card.append(meta, box);
+    $('thread').append(card);
+    reqCards.set(id, card);
+    stick();
+  }
+}
+
 function renderRoom() {
   if (!roomCode || !peer) return;
   for (const e of $$('.room-code')) e.textContent = dotted(roomCode);
@@ -1020,21 +1056,9 @@ function renderRoom() {
     const head = h('div', 'lb sm');
     head.append(h('i', 'sq s6'), `Waiting · ${pending.size}`);
     w.append(head);
-    for (const [id, p] of pending) {
-      const r = person(p.name);
-      r.style.setProperty('--c', 'var(--wait)');
-      const no = h('button', 'yn');
-      no.setAttribute('aria-label', `Deny ${p.name}`);
-      no.append(icon('x-b'));
-      const yes = h('button', 'yn yes');
-      yes.setAttribute('aria-label', `Let ${p.name} in`);
-      yes.append(icon('check-b'));
-      no.onclick = () => approve(id, false);
-      yes.onclick = () => approve(id, true);
-      r.append(no, yes);
-      w.append(r);
-    }
+    for (const [id, p] of pending) w.append(requestRow(id, p.name));
   }
+  syncRequestCards();
   $('mem-badge').hidden = !(isHost && pending.size);
   $('gear').hidden = !isHost;
   if (!isHost) $('set-pop').hidden = true;
