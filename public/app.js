@@ -217,14 +217,37 @@ requestAnimationFrame(() => { $('mq').style.animationDuration = $('mq').scrollWi
 
 function setView(v) {
   const prev = $('app').dataset.view;
-  const strip = prev === 'open' && v === 'room' ? $('strip').getBoundingClientRect() : null; // read before it is hidden
+  const fromOpen = prev === 'open' && v === 'room';
+  // read before the opening screen is hidden
+  const strip = fromOpen ? $('strip').getBoundingClientRect() : null;
+  const pairs = fromOpen ? [['#open-code', '#code-band .code'], ['#v-open .tag', '#code-band .tag'], ['#v-open .bx .youare', '#v-room .top .youare']].map(([a, b]) => [document.querySelector(a).getBoundingClientRect(), b]) : [];
   $('app').dataset.view = v;
   for (const id of ['start', 'open', 'wait', 'room']) $('v-' + id).hidden = id !== v;
   closePops();
   if (prev === v) return;
-  restart($('v-' + v), 'enter');
+  if (!fromOpen || calm.matches) restart($('v-' + v), 'enter');
   background(v);
-  if (v === 'room') requestAnimationFrame(() => sweep(strip)); // after the room has its code and lines
+  if (v === 'room') requestAnimationFrame(() => { sweep(strip); if (fromOpen) morphIn(pairs); }); // after the room has its code and lines
+}
+
+// opening -> thread: the code, its tag and "You are" move from where they were into place, the rest fades in, the composer rises
+function morphIn(pairs) {
+  if (calm.matches) return;
+  const ease = 'cubic-bezier(.65,0,.25,1)', moved = [];
+  for (const [a, sel] of pairs) {
+    const n = document.querySelector(sel), b = n.getBoundingClientRect();
+    moved.push(n);
+    n.animate([{ transform: `translate(${a.left - b.left}px,${a.top - b.top}px) scale(${b.height ? a.height / b.height : 1})`, transformOrigin: '0 0' }, { transform: 'none', transformOrigin: '0 0' }], { duration: 560, delay: 60, easing: ease, fill: 'backwards' });
+  }
+  const fadeIn = (root) => [...root.children].forEach((ch) => {
+    if (moved.includes(ch)) return;
+    if (moved.some((m) => ch.contains(m))) return fadeIn(ch);
+    ch.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 280, delay: 380, easing: ease, fill: 'backwards' });
+  });
+  fadeIn(document.querySelector('#v-room .top'));
+  fadeIn($('code-band'));
+  for (const el of $$('#thread > .sys')) el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 280, delay: 380, fill: 'backwards' });
+  document.querySelector('#v-room .composer').animate([{ transform: 'translateY(60px)' }, { transform: 'none' }], { duration: 380, delay: 360, easing: ease, fill: 'backwards' });
 }
 
 // entering the thread: a block of your colour sweeps over it, holds, then wipes away downwards.
@@ -258,8 +281,22 @@ function status(msg, cls = '') {
   $('status').className = 'status lb ' + cls;
 }
 
-function reset(msg = '', cls = '') {
+// Back to Start. The connection is torn down at once; the screen leaves the way the design does: the room
+// scrambles, the opening and waiting screens are covered by a grid of blocks. animate=false lands directly.
+let exiting = false;
+function reset(msg = '', cls = '', animate = true) {
+  if (exiting) return;
+  const view = $('app').dataset.view;
+  teardown();
+  const land = () => { exiting = false; toStart(msg, cls); };
+  if (!animate || calm.matches || view === 'start') return land();
+  exiting = true;
+  if (view === 'room') exitScramble(land); else blocks(land);
+}
+
+function teardown() {
   clearTimeout(connectTimer);
+  if (ct) clearInterval(ct.timer);
   const p = peer, d = door;
   peer = door = doorConn = null; // cleared first: destroying fires close events that must not act
   p?.destroy(); d?.destroy();
@@ -272,12 +309,16 @@ function reset(msg = '', cls = '') {
   sending = 0;
   outbox.length = 0;
   queue = Promise.resolve();
+  opening = false;
+}
+
+function toStart(msg, cls) {
   for (const it of thread) if (it.blobUrl) URL.revokeObjectURL(it.blobUrl);
   thread.length = 0;
   for (const e of $$('#thread > .msg, #thread > .sys')) e.remove();
   if (ct) stopCountdown();
-  opening = false;
   setView('start');
+  $('hero').style.visibility = '';
   redact($('hero'), 'Send anything.', 200);
   if (!$('join').hidden && msg) { connecting = false; syncCode(msg); shakeCode(); return; }
   $('join').hidden = true;
@@ -394,16 +435,25 @@ addEventListener('keydown', (e) => {
 let opening = false;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// "SEND ANYTHING." is blacked out word by word before the screen changes
-async function wipeHero() {
-  if (calm.matches) return;
-  const hero = $('hero');
-  unredact(hero, '');
+// leaving Start for the opening or waiting screen: "SEND ANYTHING." is blacked out word by word in an overlay
+// that is then cut away left to right, while Start fades out and the next screen fades in
+const EASE = 'cubic-bezier(.65,0,.35,1)';
+function leaveStart(v) {
+  if (calm.matches || $('app').dataset.view !== 'start') return setView(v);
+  const hero = $('hero'), r = hero.getBoundingClientRect(), app = $('app').getBoundingClientRect(), cs = getComputedStyle(hero);
+  unredact(hero, 'Send anything.');
+  const ov = h('div', 'hero-ov dsp');
+  Object.assign(ov.style, { left: r.left - app.left + 'px', top: r.top - app.top + 'px', width: r.width + 'px', height: r.height + 'px', fontSize: cs.fontSize, letterSpacing: cs.letterSpacing });
   const words = ['Send', 'anything.'].map((w) => h('span', '', w));
-  hero.append(words[0], ' ', words[1]);
-  await sleep(290); words[0].className = 'wipe';
-  await sleep(150); words[1].className = 'wipe';
-  await sleep(210);
+  ov.append(words[0], ' ', words[1]);
+  $('app').append(ov);
+  hero.style.visibility = 'hidden';
+  setTimeout(() => { words[0].className = 'wipe'; }, 143);
+  setTimeout(() => { words[1].className = 'wipe'; }, 292);
+  ov.animate([{ clipPath: 'inset(0 0 0 0)' }, { clipPath: 'inset(0 0 0 0)', offset: 0.7 }, { clipPath: 'inset(0 0 0 100%)' }], { duration: 650, easing: EASE, fill: 'forwards' });
+  setTimeout(() => ov.remove(), 700);
+  const out = $('v-start').animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' });
+  setTimeout(() => { setView(v); out.cancel(); }, 120);
 }
 
 // ***·*** resolves into the code: characters lock in left to right while the rest flicker
@@ -413,7 +463,9 @@ function revealCode(el, onProgress) {
     if (calm.matches) { el.textContent = dotted(roomCode); el.classList.add('solved'); onProgress(1); return setTimeout(res, 400); }
     el.textContent = '';
     el.append(h('span', 'wipe', '***·***'));
-    const t0 = performance.now() + 400, HOLD = 250, SOLVE = 2700;
+    el.style.visibility = 'hidden';
+    setTimeout(() => { el.style.visibility = ''; }, 650); // under the headline overlay until it is cut away
+    const t0 = performance.now() + 1000, HOLD = 250, SOLVE = 2700;
     const id = setInterval(() => {
       const t = performance.now() - t0;
       if (t < HOLD) { if (t >= 0) el.textContent = '***·***'; return; }
@@ -441,7 +493,7 @@ async function openRoom() {
   if (opening || peer) return;
   opening = true;
   status('');
-  await Promise.all([wipeHero(), iceReady]);
+  await iceReady;
   if (!opening) return;
   setMe(pick(CALLSIGNS));
   isHost = true;
@@ -450,7 +502,7 @@ async function openRoom() {
   $('ck3').textContent = '0%';
   $('open-foot').textContent = `${myName} · host · ${maxSlots} slots`;
   const fillStrip = strip();
-  setView('open');
+  leaveStart('open');
   const shown = revealCode($('open-code'), (p) => { $('ck3').textContent = Math.round(p * 100) + '%'; fillStrip(p); });
   const ready = new Promise((res) => {
     peer = newPeer();
@@ -641,10 +693,11 @@ function fromDoor(conn, m) {
     setMe(m.name);
     $('wait-code').textContent = '';
     redact($('wait-code'), dotted(roomCode), 1100);
+    if (!calm.matches) { $('wait-code').style.visibility = 'hidden'; setTimeout(() => { $('wait-code').style.visibility = ''; }, 650); }
     $('wait-phon').textContent = phonetic(roomCode);
     $('join').hidden = true;
     connecting = false;
-    setView('wait');
+    leaveStart('wait');
   } else if (m.t === 'denied') {
     reset(m.why === 'locked' ? 'That room is locked.' : m.why === 'full' ? 'That room is full.' : 'The host declined your request.', 'bad');
   } else if (m.t === 'welcome') {
@@ -1087,13 +1140,34 @@ function finishCountdown() {
   renderCt();
   if (ct.mode === 'close') {
     toAll({ t: 'closed' });
-    return setTimeout(() => reset('Room closed.'), 2500);
+    return setTimeout(() => reset('Room closed.', '', false), 2500);
   }
   if (isHost && ct.heir) toAll({ t: 'host', id: ct.heir, max: maxSlots, locked, auto: autoAdmit });
-  setTimeout(() => exitScramble(() => reset()), 1100);
+  setTimeout(() => reset(), 1100);
 }
 $('ct-stay').onclick = () => ct && !ct.done && stopCountdown();
 $('ct-go').onclick = finishCountdown;
+
+// back to Start from the opening or waiting screen: blocks (a few in your colour) pop in row by row, then fade
+function blocks(swap) {
+  const app = $('app'), cols = Math.max(1, Math.round(app.offsetWidth / 30)), rows = Math.max(1, Math.round(app.offsetHeight / 29));
+  const wrap = h('div', 'cover');
+  Object.assign(wrap.style, { gridTemplateColumns: `repeat(${cols},1fr)`, gridTemplateRows: `repeat(${rows},1fr)` });
+  const cells = [];
+  for (let r = 0; r < rows; r++) for (let q = 0; q < cols; q++) {
+    const d = h('i'), x = Math.random();
+    d.style.background = x < 0.06 ? 'var(--me)' : x < 0.3 ? 'var(--key-del)' : x < 0.65 ? 'var(--s3)' : 'var(--tile)';
+    wrap.append(d);
+    cells.push([d, (r / rows) * 300 + Math.random() * 140]);
+  }
+  app.append(wrap);
+  cells.forEach(([d, dl]) => d.animate([{ opacity: 0, transform: 'scale(.2)' }, { opacity: 1, transform: 'scale(1)' }], { duration: 170, delay: dl, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'both' }));
+  setTimeout(() => {
+    swap();
+    cells.forEach(([d, dl]) => d.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, delay: dl * 0.8 + 60, fill: 'forwards' }));
+    setTimeout(() => wrap.remove(), 620);
+  }, 520);
+}
 
 // leaving: every bit of text garbles while blocks cover the screen, then the start screen decodes out of the noise
 function exitScramble(onCovered) {
