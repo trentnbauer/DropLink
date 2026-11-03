@@ -70,9 +70,16 @@ syncThemeColor();
 for (const b of $$('.theme-btn')) {
   b.onclick = () => {
     const next = (root.dataset.theme || (osLight.matches ? 'light' : 'dark')) === 'dark' ? 'light' : 'dark';
-    root.dataset.theme = next;
     try { localStorage.setItem('droplink-theme', next); } catch {}
-    syncThemeColor();
+    const apply = () => { root.dataset.theme = next; syncThemeColor(); };
+    if (!document.startViewTransition || calm.matches) return apply();
+    // the new theme sweeps across the screen as a diagonal wipe from the left (as on the photography portfolio)
+    document.startViewTransition(apply).ready.then(() => {
+      root.animate(
+        { clipPath: ['polygon(0 0, 0% 0, -35% 100%, 0 100%)', 'polygon(0 0, 135% 0, 100% 100%, 0 100%)'] },
+        { duration: 750, easing: 'cubic-bezier(.7,0,.25,1)', pseudoElement: '::view-transition-new(root)' },
+      );
+    }).catch(() => {});
   };
 }
 

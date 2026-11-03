@@ -47,6 +47,10 @@
   --sun: none; --moon: inline;
 }
 
+/* the theme switch is a diagonal wipe driven from app.js; turn off the default cross-fade */
+::view-transition-old(root),
+::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+
 * { box-sizing: border-box; }
 html, body { height: 100%; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 400 14px/1.45 var(--mono); -webkit-text-size-adjust: 100%; overflow: hidden; }
