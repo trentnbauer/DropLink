@@ -3,11 +3,14 @@
 Send text and files between devices in a room. Nothing is uploaded or stored: devices connect to each other directly,
 and a small TURN relay carries the (encrypted) traffic for networks that cannot connect directly.
 
-- Start a room and you are in the app straight away. Read the 6-character code (it also shows a phonetic spelling) to other people, or join by typing a code.
+- Open a room and you are in the app as soon as its code appears. Read the 6-character code (it also shows a phonetic spelling) to other people, or join by typing a code on the on-screen keyboard (a hardware keyboard works too; `1` and `2` are shortcuts on the start screen).
+- Nobody types a name: each person gets a callsign and colour (Ember, Volt, Saffron, Rose, Mint, Tangerine, Citrine, Aqua), unique within the room. Your colour marks everything you send.
 - Anything you send is held on your device and handed to everyone who joins later, so you can share first and have people join afterwards. People who joined earlier get it live.
-- The host approves each person (one tap) while the guest sees a "Knocking" screen, or ticks "Let people in without asking" and guests go straight in. Rooms hold up to 8 people and everyone is linked to everyone.
-- Names are shown on everything people send. A `?c=CODE` link pre-fills the join form.
+- The host approves each person (one tap) while the guest waits on a "Knocking on" screen. Room settings (host only): the maximum number of people (2 to 8), lock the room, auto-admit (no approval), a new code (the old one stops working) and close the room. Everyone is linked to everyone.
+- Leaving or closing starts a 10-second countdown that can be cancelled. When the host leaves, a random member becomes host and keeps the same code; closing the room disconnects everyone.
+- A `?c=CODE` link opens the join panel with the code filled in and knocks straight away.
 - Held items live in the sender's open tab. If a sender closes the page, what only they had is gone.
+- Light and dark themes follow the device until someone taps the sun/moon button; that choice is remembered.
 
 ## Run it
 You do not build anything locally: GitHub builds the image and publishes it to `ghcr.io/trentnbauer/droplink` (see Versions below).
@@ -40,7 +43,7 @@ To test the relay, set `ICE_POLICY=relay` in `.env` and restart: every connectio
 ## Notes
 - The relay refuses to forward to private address ranges (10/8, 172.16/12, 192.168/16, 127/8, link-local), so the public credentials cannot be used to reach into your home network. Set `TURN_ALLOW_PRIVATE=1` only for testing on a private network.
 - Devices find each other through the public PeerJS broker (`0.peerjs.com`), which sees connection setup (IP addresses) but never files or text. To use your own broker, pass `{ host, port, path, secure }` to `new Peer(...)` in `public/app.js` and add it to the CSP in `public/index.html`.
-- No build step. The theme is "4b Redacted, dark": colours are the CSS variables at the top of `public/style.css`. Fonts and icons are self-hosted for the strict CSP.
+- No build step. The design is "7a HUD / signal orange": colours are the CSS variables at the top of `public/style.css` (a dark set and a light set). Fonts (Archivo, IBM Plex Mono) and icons (Phosphor, inline sprite in `index.html`) are self-hosted for the strict CSP. Animations stop when the device asks for reduced motion.
 - Tests: `npm test` (server only; no dependencies to install).
 
 ## Versions and releases

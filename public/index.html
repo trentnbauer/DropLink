@@ -6,121 +6,226 @@
 <title>DropLink</title>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self'; font-src 'self'; connect-src 'self' https://0.peerjs.com wss://0.peerjs.com; worker-src 'none'">
 <meta name="referrer" content="no-referrer">
-<meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#0f0e0c">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#0b0b0b">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <svg xmlns="http://www.w3.org/2000/svg" class="sprite" aria-hidden="true">
-<symbol id="i-arrows-left-right" viewBox="0 0 256 256"><path d="M213.66,181.66l-32,32a8,8,0,0,1-11.32-11.32L188.69,184H48a8,8,0,0,1,0-16H188.69l-18.35-18.34a8,8,0,0,1,11.32-11.32l32,32A8,8,0,0,1,213.66,181.66Zm-139.32-64a8,8,0,0,0,11.32-11.32L67.31,88H208a8,8,0,0,0,0-16H67.31L85.66,53.66A8,8,0,0,0,74.34,42.34l-32,32a8,8,0,0,0,0,11.32Z"/></symbol>
-<symbol id="i-user" viewBox="0 0 256 256"><path d="M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0C63.78,166.78,40.31,185.66,25.08,212a8,8,0,1,0,13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06,56.06,0,0,1,72,96Z"/></symbol>
-<symbol id="i-plus-circle" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm48-88a8,8,0,0,1-8,8H136v32a8,8,0,0,1-16,0V136H88a8,8,0,0,1,0-16h32V88a8,8,0,0,1,16,0v32h32A8,8,0,0,1,176,128Z"/></symbol>
-<symbol id="i-arrow-right" viewBox="0 0 256 256"><path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"/></symbol>
+<symbol id="i-broadcast" viewBox="0 0 256 256"><path d="M128,88a40,40,0,1,0,40,40A40,40,0,0,0,128,88Zm0,64a24,24,0,1,1,24-24A24,24,0,0,1,128,152Zm73.71,7.14a80,80,0,0,1-14.08,22.2,8,8,0,0,1-11.92-10.67,63.95,63.95,0,0,0,0-85.33,8,8,0,1,1,11.92-10.67,80.08,80.08,0,0,1,14.08,84.47ZM69,103.09a64,64,0,0,0,11.26,67.58,8,8,0,0,1-11.92,10.67,79.93,79.93,0,0,1,0-106.67A8,8,0,1,1,80.29,85.34,63.77,63.77,0,0,0,69,103.09ZM248,128a119.58,119.58,0,0,1-34.29,84,8,8,0,1,1-11.42-11.2,103.9,103.9,0,0,0,0-145.56A8,8,0,1,1,213.71,44,119.58,119.58,0,0,1,248,128ZM53.71,200.78A8,8,0,1,1,42.29,212a119.87,119.87,0,0,1,0-168,8,8,0,1,1,11.42,11.2,103.9,103.9,0,0,0,0,145.56Z"/></symbol>
+<symbol id="i-keyhole" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm40-104a40,40,0,1,0-65.94,30.44L88.68,172.77A8,8,0,0,0,96,184h64a8,8,0,0,0,7.32-11.23l-13.38-30.33A40.14,40.14,0,0,0,168,112ZM136.68,143l11,25.05H108.27l11-25.05A8,8,0,0,0,116,132.79a24,24,0,1,1,24,0A8,8,0,0,0,136.68,143Z"/></symbol>
+<symbol id="i-gear-six" viewBox="0 0 256 256"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm109.94-52.79a8,8,0,0,0-3.89-5.4l-29.83-17-.12-33.62a8,8,0,0,0-2.83-6.08,111.91,111.91,0,0,0-36.72-20.67,8,8,0,0,0-6.46.59L128,41.85,97.88,25a8,8,0,0,0-6.47-.6A112.1,112.1,0,0,0,54.73,45.15a8,8,0,0,0-2.83,6.07l-.15,33.65-29.83,17a8,8,0,0,0-3.89,5.4,106.47,106.47,0,0,0,0,41.56,8,8,0,0,0,3.89,5.4l29.83,17,.12,33.62a8,8,0,0,0,2.83,6.08,111.91,111.91,0,0,0,36.72,20.67,8,8,0,0,0,6.46-.59L128,214.15,158.12,231a7.91,7.91,0,0,0,3.9,1,8.09,8.09,0,0,0,2.57-.42,112.1,112.1,0,0,0,36.68-20.73,8,8,0,0,0,2.83-6.07l.15-33.65,29.83-17a8,8,0,0,0,3.89-5.4A106.47,106.47,0,0,0,237.94,107.21Zm-15,34.91-28.57,16.25a8,8,0,0,0-3,3c-.58,1-1.19,2.06-1.81,3.06a7.94,7.94,0,0,0-1.22,4.21l-.15,32.25a95.89,95.89,0,0,1-25.37,14.3L134,199.13a8,8,0,0,0-3.91-1h-.19c-1.21,0-2.43,0-3.64,0a8.08,8.08,0,0,0-4.1,1l-28.84,16.1A96,96,0,0,1,67.88,201l-.11-32.2a8,8,0,0,0-1.22-4.22c-.62-1-1.23-2-1.8-3.06a8.09,8.09,0,0,0-3-3.06l-28.6-16.29a90.49,90.49,0,0,1,0-28.26L61.67,97.63a8,8,0,0,0,3-3c.58-1,1.19-2.06,1.81-3.06a7.94,7.94,0,0,0,1.22-4.21l.15-32.25a95.89,95.89,0,0,1,25.37-14.3L122,56.87a8,8,0,0,0,4.1,1c1.21,0,2.43,0,3.64,0a8.08,8.08,0,0,0,4.1-1l28.84-16.1A96,96,0,0,1,188.12,55l.11,32.2a8,8,0,0,0,1.22,4.22c.62,1,1.23,2,1.8,3.06a8.09,8.09,0,0,0,3,3.06l28.6,16.29A90.49,90.49,0,0,1,222.9,142.12Z"/></symbol>
+<symbol id="i-users" viewBox="0 0 256 256"><path d="M117.25,157.92a60,60,0,1,0-66.5,0A95.83,95.83,0,0,0,3.53,195.63a8,8,0,1,0,13.4,8.74,80,80,0,0,1,134.14,0,8,8,0,0,0,13.4-8.74A95.83,95.83,0,0,0,117.25,157.92ZM40,108a44,44,0,1,1,44,44A44.05,44.05,0,0,1,40,108Zm210.14,98.7a8,8,0,0,1-11.07-2.33A79.83,79.83,0,0,0,172,168a8,8,0,0,1,0-16,44,44,0,1,0-16.34-84.87,8,8,0,1,1-5.94-14.85,60,60,0,0,1,55.53,105.64,95.83,95.83,0,0,1,47.22,37.71A8,8,0,0,1,250.14,206.7Z"/></symbol>
 <symbol id="i-lock-simple" viewBox="0 0 256 256"><path d="M208,80H176V56a48,48,0,0,0-96,0V80H48A16,16,0,0,0,32,96V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V96A16,16,0,0,0,208,80ZM96,56a32,32,0,0,1,64,0V80H96ZM208,208H48V96H208V208Z"/></symbol>
 <symbol id="i-sign-out" viewBox="0 0 256 256"><path d="M120,216a8,8,0,0,1-8,8H48a8,8,0,0,1-8-8V40a8,8,0,0,1,8-8h64a8,8,0,0,1,0,16H56V208h56A8,8,0,0,1,120,216Zm109.66-93.66-40-40a8,8,0,0,0-11.32,11.32L204.69,120H112a8,8,0,0,0,0,16h92.69l-26.35,26.34a8,8,0,0,0,11.32,11.32l40-40A8,8,0,0,0,229.66,122.34Z"/></symbol>
-<symbol id="i-copy" viewBox="0 0 256 256"><path d="M216,32H88a8,8,0,0,0-8,8V80H40a8,8,0,0,0-8,8V216a8,8,0,0,0,8,8H168a8,8,0,0,0,8-8V176h40a8,8,0,0,0,8-8V40A8,8,0,0,0,216,32ZM160,208H48V96H160Zm48-48H176V88a8,8,0,0,0-8-8H96V48H208Z"/></symbol>
+<symbol id="i-sun" viewBox="0 0 256 256"><path d="M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-16,0a48,48,0,1,0-48,48A48.05,48.05,0,0,0,176,128ZM58.34,69.66A8,8,0,0,0,69.66,58.34l-16-16A8,8,0,0,0,42.34,53.66Zm0,116.68-16,16a8,8,0,0,0,11.32,11.32l16-16a8,8,0,0,0-11.32-11.32ZM192,72a8,8,0,0,0,5.66-2.34l16-16a8,8,0,0,0-11.32-11.32l-16,16A8,8,0,0,0,192,72Zm5.66,114.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32-11.32ZM48,128a8,8,0,0,0-8-8H16a8,8,0,0,0,0,16H40A8,8,0,0,0,48,128Zm80,80a8,8,0,0,0-8,8v24a8,8,0,0,0,16,0V216A8,8,0,0,0,128,208Zm112-88H216a8,8,0,0,0,0,16h24a8,8,0,0,0,0-16Z"/></symbol>
+<symbol id="i-moon" viewBox="0 0 256 256"><path d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.84,104.84,0,0,0-52.91,37A104,104,0,0,0,136,224a103.09,103.09,0,0,0,62.52-20.88,104.84,104.84,0,0,0,37-52.91A8,8,0,0,0,233.54,142.23ZM188.9,190.34A88,88,0,0,1,65.66,67.11a89,89,0,0,1,31.4-26A106,106,0,0,0,96,56,104.11,104.11,0,0,0,200,160a106,106,0,0,0,14.92-1.06A89,89,0,0,1,188.9,190.34Z"/></symbol>
+<symbol id="i-power" viewBox="0 0 256 256"><path d="M120,128V48a8,8,0,0,1,16,0v80a8,8,0,0,1-16,0Zm60.37-78.7a8,8,0,0,0-8.74,13.4C194.74,77.77,208,101.57,208,128a80,80,0,0,1-160,0c0-26.43,13.26-50.23,36.37-65.3a8,8,0,0,0-8.74-13.4C47.9,67.38,32,96.06,32,128a96,96,0,0,0,192,0C224,96.06,208.1,67.38,180.37,49.3Z"/></symbol>
 <symbol id="i-x" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></symbol>
+<symbol id="i-copy" viewBox="0 0 256 256"><path d="M216,32H88a8,8,0,0,0-8,8V80H40a8,8,0,0,0-8,8V216a8,8,0,0,0,8,8H168a8,8,0,0,0,8-8V176h40a8,8,0,0,0,8-8V40A8,8,0,0,0,216,32ZM160,208H48V96H160Zm48-48H176V88a8,8,0,0,0-8-8H96V48H208Z"/></symbol>
 <symbol id="i-check" viewBox="0 0 256 256"><path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"/></symbol>
-<symbol id="i-plus" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"/></symbol>
-<symbol id="i-arrow-up" viewBox="0 0 256 256"><path d="M205.66,117.66a8,8,0,0,1-11.32,0L136,59.31V216a8,8,0,0,1-16,0V59.31L61.66,117.66a8,8,0,0,1-11.32-11.32l72-72a8,8,0,0,1,11.32,0l72,72A8,8,0,0,1,205.66,117.66Z"/></symbol>
+<symbol id="i-arrows-clockwise" viewBox="0 0 256 256"><path d="M224,48V96a8,8,0,0,1-8,8H168a8,8,0,0,1,0-16h28.69L182.06,73.37a79.56,79.56,0,0,0-56.13-23.43h-.45A79.52,79.52,0,0,0,69.59,72.71,8,8,0,0,1,58.41,61.27a96,96,0,0,1,135,.79L208,76.69V48a8,8,0,0,1,16,0ZM186.41,183.29a80,80,0,0,1-112.47-.66L59.31,168H88a8,8,0,0,0,0-16H40a8,8,0,0,0-8,8v48a8,8,0,0,0,16,0V179.31l14.63,14.63A95.43,95.43,0,0,0,130,222.06h.53a95.36,95.36,0,0,0,67.07-27.33,8,8,0,0,0-11.18-11.44Z"/></symbol>
 <symbol id="i-paperclip" viewBox="0 0 256 256"><path d="M209.66,122.34a8,8,0,0,1,0,11.32l-82.05,82a56,56,0,0,1-79.2-79.21L147.67,35.73a40,40,0,1,1,56.61,56.55L105,193A24,24,0,1,1,71,159L154.3,74.38A8,8,0,1,1,165.7,85.6L82.39,170.31a8,8,0,1,0,11.27,11.36L192.93,81A24,24,0,1,0,159,47L59.76,147.68a40,40,0,1,0,56.53,56.62l82.06-82A8,8,0,0,1,209.66,122.34Z"/></symbol>
 <symbol id="i-download-simple" viewBox="0 0 256 256"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0Zm-101.66,5.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0-11.32-11.32L136,124.69V32a8,8,0,0,0-16,0v92.69L93.66,98.34a8,8,0,0,0-11.32,11.32Z"/></symbol>
-<symbol id="i-checks" viewBox="0 0 256 256"><path d="M149.61,85.71l-89.6,88a8,8,0,0,1-11.22,0L10.39,136a8,8,0,1,1,11.22-11.41L54.4,156.79l84-82.5a8,8,0,1,1,11.22,11.42Zm96.1-11.32a8,8,0,0,0-11.32-.1l-84,82.5-18.83-18.5a8,8,0,0,0-11.21,11.42l24.43,24a8,8,0,0,0,11.22,0l89.6-88A8,8,0,0,0,245.71,74.39Z"/></symbol>
+<symbol id="i-arrow-elbow-down-left" viewBox="0 0 256 256"><path d="M200,32V176a8,8,0,0,1-8,8H67.31l34.35,34.34a8,8,0,0,1-11.32,11.32l-48-48a8,8,0,0,1,0-11.32l48-48a8,8,0,0,1,11.32,11.32L67.31,168H184V32a8,8,0,0,1,16,0Z"/></symbol>
+<symbol id="i-file" viewBox="0 0 256 256"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Z"/></symbol>
 <symbol id="i-file-pdf" viewBox="0 0 256 256"><path d="M224,152a8,8,0,0,1-8,8H192v16h16a8,8,0,0,1,0,16H192v16a8,8,0,0,1-16,0V152a8,8,0,0,1,8-8h32A8,8,0,0,1,224,152ZM92,172a28,28,0,0,1-28,28H56v8a8,8,0,0,1-16,0V152a8,8,0,0,1,8-8H64A28,28,0,0,1,92,172Zm-16,0a12,12,0,0,0-12-12H56v24h8A12,12,0,0,0,76,172Zm88,8a36,36,0,0,1-36,36H112a8,8,0,0,1-8-8V152a8,8,0,0,1,8-8h16A36,36,0,0,1,164,180Zm-16,0a20,20,0,0,0-20-20h-8v40h8A20,20,0,0,0,148,180ZM40,112V40A16,16,0,0,1,56,24h96a8,8,0,0,1,5.66,2.34l56,56A8,8,0,0,1,216,88v24a8,8,0,0,1-16,0V96H152a8,8,0,0,1-8-8V40H56v72a8,8,0,0,1-16,0ZM160,80h28.69L160,51.31Z"/></symbol>
 <symbol id="i-file-zip" viewBox="0 0 256 256"><path d="M184,144H168a8,8,0,0,0-8,8v56a8,8,0,0,0,16,0v-8h8a28,28,0,0,0,0-56Zm0,40h-8V160h8a12,12,0,0,1,0,24Zm-48-32v56a8,8,0,0,1-16,0V152a8,8,0,0,1,16,0ZM96,208a8,8,0,0,1-8,8H56a8,8,0,0,1-7-12l25.16-44H56a8,8,0,0,1,0-16H88a8,8,0,0,1,7,12L69.79,200H88A8,8,0,0,1,96,208ZM213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40v72a8,8,0,0,0,16,0V40h88V88a8,8,0,0,0,8,8h48v16a8,8,0,0,0,16,0V88A8,8,0,0,0,213.66,82.34ZM160,80V51.31L188.69,80Z"/></symbol>
 <symbol id="i-file-video" viewBox="0 0 256 256"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40v72a8,8,0,0,0,16,0V40h88V88a8,8,0,0,0,8,8h48V216h-8a8,8,0,0,0,0,16h8a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM155.88,145a8,8,0,0,0-8.12.22l-19.95,12.46A16,16,0,0,0,112,144H48a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h64a16,16,0,0,0,15.81-13.68l19.95,12.46A8,8,0,0,0,160,216V152A8,8,0,0,0,155.88,145ZM112,208H48V160h64v48Zm32-6.43-16-10V176.43l16-10Z"/></symbol>
-<symbol id="i-tray-arrow-down" viewBox="0 0 256 256"><path d="M208,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm0,16V152h-28.7A15.86,15.86,0,0,0,168,156.69L148.69,176H107.31L88,156.69A15.86,15.86,0,0,0,76.69,152H48V48Zm0,160H48V168H76.69L96,187.31A15.86,15.86,0,0,0,107.31,192h41.38A15.86,15.86,0,0,0,160,187.31L179.31,168H208v40ZM90.34,125.66a8,8,0,0,1,11.32-11.32L120,132.69V72a8,8,0,0,1,16,0v60.69l18.34-18.35a8,8,0,0,1,11.32,11.32l-32,32a8,8,0,0,1-11.32,0Z"/></symbol>
-<symbol id="i-file" viewBox="0 0 256 256"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Z"/></symbol>
 <symbol id="i-file-image" viewBox="0 0 256 256"><path d="M110.66,147.56a8,8,0,0,0-13.32,0L76.49,178.85l-9.76-15.18a8,8,0,0,0-13.46,0l-36,56A8,8,0,0,0,24,232H152a8,8,0,0,0,6.66-12.44ZM38.65,216,60,182.79l9.63,15a8,8,0,0,0,13.39.11l21-31.47L137.05,216Zm175-133.66-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40v88a8,8,0,0,0,16,0V40h88V88a8,8,0,0,0,8,8h48V216h-8a8,8,0,0,0,0,16h8a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160Z"/></symbol>
 <symbol id="i-file-audio" viewBox="0 0 256 256"><path d="M99.06,128.61a8,8,0,0,0-8.72,1.73L68.69,152H48a8,8,0,0,0-8,8v40a8,8,0,0,0,8,8H68.69l21.65,21.66A8,8,0,0,0,104,224V136A8,8,0,0,0,99.06,128.61ZM88,204.69,77.66,194.34A8,8,0,0,0,72,192H56V168H72a8,8,0,0,0,5.66-2.34L88,155.31ZM152,180a40.55,40.55,0,0,1-20,34.91A8,8,0,0,1,124,201.09a24.49,24.49,0,0,0,0-42.18A8,8,0,0,1,132,145.09,40.55,40.55,0,0,1,152,180Zm61.66-97.66-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40v80a8,8,0,0,0,16,0V40h88V88a8,8,0,0,0,8,8h48V216H168a8,8,0,0,0,0,16h32a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160Z"/></symbol>
+<symbol id="i-spinner-gap" viewBox="0 0 256 256"><path d="M136,32V64a8,8,0,0,1-16,0V32a8,8,0,0,1,16,0Zm88,88H192a8,8,0,0,0,0,16h32a8,8,0,0,0,0-16Zm-45.09,47.6a8,8,0,0,0-11.31,11.31l22.62,22.63a8,8,0,0,0,11.32-11.32ZM128,184a8,8,0,0,0-8,8v32a8,8,0,0,0,16,0V192A8,8,0,0,0,128,184ZM77.09,167.6,54.46,190.22a8,8,0,0,0,11.32,11.32L88.4,178.91A8,8,0,0,0,77.09,167.6ZM72,128a8,8,0,0,0-8-8H32a8,8,0,0,0,0,16H64A8,8,0,0,0,72,128ZM65.78,54.46A8,8,0,0,0,54.46,65.78L77.09,88.4A8,8,0,0,0,88.4,77.09Z"/></symbol>
+<symbol id="i-broadcast-b" viewBox="0 0 256 256"><path d="M128,84a44,44,0,1,0,44,44A44.05,44.05,0,0,0,128,84Zm0,64a20,20,0,1,1,20-20A20,20,0,0,1,128,148Zm77.39,12.7A83.94,83.94,0,0,1,190.61,184a12,12,0,0,1-17.89-16,59.92,59.92,0,0,0,0-80,12,12,0,0,1,17.89-16,84.07,84.07,0,0,1,14.78,88.7ZM83.28,168a12,12,0,0,1-17.89,16,83.94,83.94,0,0,1,0-112A12,12,0,0,1,83.28,88a59.92,59.92,0,0,0,0,80ZM252,128a123.63,123.63,0,0,1-35.43,86.78A12,12,0,1,1,199.43,198a99.88,99.88,0,0,0,0-140,12,12,0,0,1,17.14-16.8A123.63,123.63,0,0,1,252,128ZM56.57,198a12,12,0,0,1-17.14,16.8,123.89,123.89,0,0,1,0-173.56A12,12,0,0,1,56.57,58a99.88,99.88,0,0,0,0,140Z"/></symbol>
+<symbol id="i-keyhole-b" viewBox="0 0 256 256"><path d="M128,20A108,108,0,1,0,236,128,108.12,108.12,0,0,0,128,20Zm0,192a84,84,0,1,1,84-84A84.09,84.09,0,0,1,128,212Zm0-144a44,44,0,0,0-33.61,72.41l-9.86,32.06A12,12,0,0,0,96,188h64a12,12,0,0,0,11.47-15.53l-9.86-32.06A44,44,0,0,0,128,68Zm8.53,72.51L143.75,164h-31.5l7.22-23.49a12,12,0,0,0-4-12.89,20,20,0,1,1,25,0A12,12,0,0,0,136.53,140.51Z"/></symbol>
+<symbol id="i-arrow-down-b" viewBox="0 0 256 256"><path d="M208.49,152.49l-72,72a12,12,0,0,1-17,0l-72-72a12,12,0,0,1,17-17L116,187V40a12,12,0,0,1,24,0V187l51.51-51.52a12,12,0,0,1,17,17Z"/></symbol>
+<symbol id="i-arrow-up-b" viewBox="0 0 256 256"><path d="M208.49,120.49a12,12,0,0,1-17,0L140,69V216a12,12,0,0,1-24,0V69L64.49,120.49a12,12,0,0,1-17-17l72-72a12,12,0,0,1,17,0l72,72A12,12,0,0,1,208.49,120.49Z"/></symbol>
+<symbol id="i-warning-b" viewBox="0 0 256 256"><path d="M240.26,186.1,152.81,34.23h0a28.74,28.74,0,0,0-49.62,0L15.74,186.1a27.45,27.45,0,0,0,0,27.71A28.31,28.31,0,0,0,40.55,228h174.9a28.31,28.31,0,0,0,24.79-14.19A27.45,27.45,0,0,0,240.26,186.1Zm-20.8,15.7a4.46,4.46,0,0,1-4,2.2H40.55a4.46,4.46,0,0,1-4-2.2,3.56,3.56,0,0,1,0-3.73L124,46.2a4.77,4.77,0,0,1,8,0l87.44,151.87A3.56,3.56,0,0,1,219.46,201.8ZM116,136V104a12,12,0,0,1,24,0v32a12,12,0,0,1-24,0Zm28,40a16,16,0,1,1-16-16A16,16,0,0,1,144,176Z"/></symbol>
+<symbol id="i-crown-simple-b" viewBox="0 0 256 256"><path d="M232.63,70a19.82,19.82,0,0,0-23.55,4.71l-29.52,31.82L146.22,31.76l-.06-.14a20,20,0,0,0-36.32,0l-.06.14L76.44,106.52,46.92,74.7a20,20,0,0,0-34.6,16.81c0,.16.06.31.09.47L35.07,195.76A20,20,0,0,0,54.71,212H201.29a20,20,0,0,0,19.64-16.24L243.59,92c0-.16.07-.31.09-.47A19.82,19.82,0,0,0,232.63,70ZM198.06,188H57.94L39.06,101.51,71.2,136.16A12,12,0,0,0,91,132.89l37-83.07,37,83.07a12,12,0,0,0,19.76,3.27l32.14-34.65Z"/></symbol>
+<symbol id="i-arrow-counter-clockwise-b" viewBox="0 0 256 256"><path d="M228,128a100,100,0,0,1-98.66,100H128a99.39,99.39,0,0,1-68.62-27.29,12,12,0,0,1,16.48-17.45,76,76,0,1,0-1.57-109c-.13.13-.25.25-.39.37L54.89,92H72a12,12,0,0,1,0,24H24a12,12,0,0,1-12-12V56a12,12,0,0,1,24,0V76.72L57.48,57.06A100,100,0,0,1,228,128Z"/></symbol>
+<symbol id="i-power-b" viewBox="0 0 256 256"><path d="M116,128V48a12,12,0,0,1,24,0v80a12,12,0,0,1-24,0Zm66.55-82a12,12,0,0,0-13.1,20.1C191.41,80.37,204,103,204,128a76,76,0,0,1-152,0c0-25,12.59-47.63,34.55-61.95A12,12,0,0,0,73.45,46C44.56,64.78,28,94.69,28,128a100,100,0,0,0,200,0C228,94.69,211.44,64.78,182.55,46Z"/></symbol>
+<symbol id="i-minus-b" viewBox="0 0 256 256"><path d="M228,128a12,12,0,0,1-12,12H40a12,12,0,0,1,0-24H216A12,12,0,0,1,228,128Z"/></symbol>
+<symbol id="i-plus-b" viewBox="0 0 256 256"><path d="M228,128a12,12,0,0,1-12,12H140v76a12,12,0,0,1-24,0V140H40a12,12,0,0,1,0-24h76V40a12,12,0,0,1,24,0v76h76A12,12,0,0,1,228,128Z"/></symbol>
+<symbol id="i-x-b" viewBox="0 0 256 256"><path d="M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z"/></symbol>
+<symbol id="i-check-b" viewBox="0 0 256 256"><path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"/></symbol>
+<symbol id="i-checks-b" viewBox="0 0 256 256"><path d="M152.41,88.56l-89.6,88a12,12,0,0,1-16.82,0L7.59,138.85a12,12,0,0,1,16.82-17.13l30,29.46,81.19-79.74a12,12,0,0,1,16.82,17.12Zm96.15-17a12,12,0,0,0-17-.15L150.4,151.18l-7.88-7.74a12,12,0,0,0-16.82,17.12l16.29,16a12,12,0,0,0,16.82,0l89.6-88A12,12,0,0,0,248.56,71.59Z"/></symbol>
+<symbol id="i-users-b" viewBox="0 0 256 256"><path d="M125.18,156.94a64,64,0,1,0-82.36,0,100.23,100.23,0,0,0-39.49,32,12,12,0,0,0,19.35,14.2,76,76,0,0,1,122.64,0,12,12,0,0,0,19.36-14.2A100.33,100.33,0,0,0,125.18,156.94ZM44,108a40,40,0,1,1,40,40A40,40,0,0,1,44,108Zm206.1,97.67a12,12,0,0,1-16.78-2.57A76.31,76.31,0,0,0,172,172a12,12,0,0,1,0-24,40,40,0,1,0-10.3-78.67,12,12,0,1,1-6.16-23.19,64,64,0,0,1,57.64,110.8,100.23,100.23,0,0,1,39.49,32A12,12,0,0,1,250.1,205.67Z"/></symbol>
+<symbol id="i-lock-simple-b" viewBox="0 0 256 256"><path d="M208,76H180V56A52,52,0,0,0,76,56V76H48A20,20,0,0,0,28,96V208a20,20,0,0,0,20,20H208a20,20,0,0,0,20-20V96A20,20,0,0,0,208,76ZM100,56a28,28,0,0,1,56,0V76H100ZM204,204H52V100H204Z"/></symbol>
+<symbol id="i-file-pdf-b" viewBox="0 0 256 256"><path d="M200,164v8h12a12,12,0,0,1,0,24H200v12a12,12,0,0,1-24,0V152a12,12,0,0,1,12-12h32a12,12,0,0,1,0,24ZM92,172a32,32,0,0,1-32,32H56v4a12,12,0,0,1-24,0V152a12,12,0,0,1,12-12H60A32,32,0,0,1,92,172Zm-24,0a8,8,0,0,0-8-8H56v16h4A8,8,0,0,0,68,172Zm100,8a40,40,0,0,1-40,40H112a12,12,0,0,1-12-12V152a12,12,0,0,1,12-12h16A40,40,0,0,1,168,180Zm-24,0a16,16,0,0,0-16-16h-4v32h4A16,16,0,0,0,144,180ZM36,108V40A20,20,0,0,1,56,20h96a12,12,0,0,1,8.49,3.52l56,56A12,12,0,0,1,220,88v20a12,12,0,0,1-24,0v-4H148a12,12,0,0,1-12-12V44H60v64a12,12,0,0,1-24,0ZM160,57V80h23Z"/></symbol>
+<symbol id="i-file-b" viewBox="0 0 256 256"><path d="M216.49,79.52l-56-56A12,12,0,0,0,152,20H56A20,20,0,0,0,36,40V216a20,20,0,0,0,20,20H200a20,20,0,0,0,20-20V88A12,12,0,0,0,216.49,79.52ZM160,57l23,23H160ZM60,212V44h76V92a12,12,0,0,0,12,12h48V212Z"/></symbol>
 </svg>
-<main id="app" data-view="start" data-pane="thread">
+<main id="app" data-view="start">
+  <div id="bg" class="bg" aria-hidden="true"></div>
 
   <section id="v-start" class="view start">
-    <div class="brand"><span class="logo"><svg class="i" aria-hidden="true"><use href="#i-arrows-left-right"/></svg></span><span class="brand-name">DropLink</span></div>
-    <div class="hero">
-      <h1 class="redact" data-redact="Pass things between devices. Directly."></h1>
-      <p class="sub redact" data-redact="Peer-to-peer over WebRTC. Nothing is uploaded or stored." data-offset="1400"></p>
+    <header class="top">
+      <div class="logo"><i class="sq"></i><span>DropLink</span></div>
+      <div class="marquee" aria-hidden="true"><div id="mq" class="mq lb"></div></div>
+      <button class="ib theme-btn" aria-label="Toggle light or dark mode" title="Switch theme"><svg class="i i-sun"><use href="#i-sun"/></svg><svg class="i i-moon"><use href="#i-moon"/></svg></button>
+    </header>
+    <div class="start-main">
+      <div class="band">
+        <div class="pix" data-seed="11"></div>
+        <div class="bx cx">
+          <h1 id="hero" class="hero dsp">Send anything.</h1>
+          <p class="sub lb redact" data-redact="Device to device · nothing stored" data-offset="1500"></p>
+          <svg class="i" aria-hidden="true"><use href="#i-arrow-down-b"/></svg>
+        </div>
+        <div class="pix b" data-seed="47"></div>
+      </div>
+      <div class="term">
+        <div class="term-head lb sm"><span>droplink ~ <span class="redact" data-redact="device to device · nothing stored" data-offset="1500"></span></span><span>Select</span></div>
+        <button id="d-open" class="open-btn"><span>&gt;</span><span>open <span class="arg">--room</span></span><span class="lb sm up">Host · up to 8</span><span class="lb sm key-tag">1</span></button>
+        <button id="d-join" class="two join-btn"><span class="gt">&gt;</span><span>join <span class="arg">--code ___-___</span></span><span class="lb sm key-tag">2</span></button>
+      </div>
     </div>
-    <div class="field">
-      <label for="name">Your name</label>
-      <div class="input"><svg class="i" aria-hidden="true"><use href="#i-user"/></svg><input id="name" maxlength="24" autocomplete="nickname" spellcheck="false"></div>
+    <div class="tiles">
+      <button class="tile open-btn" aria-label="Open a room">
+        <span class="tile-top"><svg class="i" aria-hidden="true"><use href="#i-broadcast-b"/></svg><span class="lb key-tag">1</span></span>
+        <span><span class="cmd"><span class="gt">&gt;</span> open</span><span class="lb sm arg">--room</span></span>
+      </button>
+      <button class="tile two join-btn" aria-label="Join with a code">
+        <span class="tile-top"><svg class="i" aria-hidden="true"><use href="#i-keyhole-b"/></svg><span class="lb key-tag">2</span></span>
+        <span><span class="cmd"><span class="gt">&gt;</span> join</span><span class="lb sm arg">--code ___-___</span></span>
+      </button>
     </div>
-    <button id="host" class="btn primary"><svg class="i" aria-hidden="true"><use href="#i-plus-circle"/></svg>Start a room</button>
-    <div class="or"><span>or join one</span></div>
-    <div class="join">
-      <div class="code-grid" role="group" aria-label="Room code"><input class="cell" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Room code character 1"><input class="cell" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Room code character 2"><input class="cell" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Room code character 3"><div class="dash"></div><input class="cell" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Room code character 4"><input class="cell" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Room code character 5"><input class="cell" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Room code character 6"></div>
-      <div class="hint">Letters and numbers, not case-sensitive</div>
-      <button id="join" class="btn" disabled>Connect<svg class="i" aria-hidden="true"><use href="#i-arrow-right"/></svg></button>
-      <p id="status" class="status" role="status"></p>
-    </div>
-    <footer class="foot"><svg class="i" aria-hidden="true"><use href="#i-lock-simple"/></svg><span class="redact" data-redact="End-to-end, device to device. Up to 8 people." data-offset="2600"></span><span id="ver" class="ver"></span></footer>
+    <p id="status" class="status lb" role="status"></p>
+    <span id="ver" class="ver lb sm"></span>
   </section>
 
-  <section id="v-knock" class="view knock" hidden>
-    <div class="knock-av" id="knock-av"></div>
-    <h2>Knocking on <span id="knock-code" class="mono"></span></h2>
-    <p class="muted">The host needs to let you in. Keep this screen open.</p>
-    <button id="knock-cancel" class="btn">Cancel</button>
+  <section id="v-open" class="view open" hidden>
+    <header class="top">
+      <span class="lb youare">Start → Lobby</span>
+      <button class="ib theme-btn" aria-label="Toggle light or dark mode" title="Switch theme"><svg class="i i-sun"><use href="#i-sun"/></svg><svg class="i i-moon"><use href="#i-moon"/></svg></button>
+    </header>
+    <div class="stage">
+      <div class="band">
+        <div class="pix" data-seed="11"></div>
+        <div class="bx cx">
+          <div class="tag lb">Opening room</div>
+          <div id="open-code" class="code dsp" aria-live="polite"></div>
+          <div class="youare lb">You are:<i class="sq me-sq"></i><span class="nm me-name"></span></div>
+        </div>
+        <div class="pix b" data-seed="47"></div>
+      </div>
+      <div class="strip"><div id="strip"></div></div>
+      <div class="checks lb">
+        <div><span>01 Keys</span><b id="ck1">…</b></div>
+        <div><span>02 Signal</span><b id="ck2">…</b></div>
+        <div><span>03 Room code</span><b id="ck3" class="acc">0%</b></div>
+      </div>
+    </div>
+    <div class="foot lb"><span id="open-foot"></span></div>
+  </section>
+
+  <section id="v-wait" class="view wait" hidden>
+    <header class="top">
+      <div class="youare lb">You are:<i class="sq me-sq"></i><span class="nm me-name"></span></div>
+      <div class="chip lb"><i class="sq s6"></i>Waiting</div>
+      <button class="ib theme-btn" aria-label="Toggle light or dark mode" title="Switch theme"><svg class="i i-sun"><use href="#i-sun"/></svg><svg class="i i-moon"><use href="#i-moon"/></svg></button>
+    </header>
+    <div class="wait-main">
+      <div class="band">
+        <div class="pix" data-seed="11"></div>
+        <div class="bx cx">
+          <div class="bx-row"><div class="tag lb">Knocking on</div><div class="lb">Pending</div></div>
+          <div id="wait-code" class="code dsp"></div>
+          <div id="wait-phon" class="phon"></div>
+        </div>
+        <div class="pix b" data-seed="47"></div>
+      </div>
+      <div class="wait-body">
+        <div class="who-row"><div><span class="lb">You are:</span><span class="dsp me-name"></span></div><span class="lb">Host: pending</span></div>
+        <div class="card cx out">
+          <h2 class="dsp redact" data-redact="Waiting for the host" data-offset="700"></h2>
+          <p>They'll see your request and let you in.</p><p>Keep this screen open — you'll join the room automatically.</p>
+        </div>
+      </div>
+      <div class="bottom"><button id="knock-cancel" class="outline lb">Cancel request</button></div>
+    </div>
   </section>
 
   <section id="v-room" class="view room" hidden>
-    <aside class="side">
-      <div class="lobby-top">
-        <span class="open"><i class="dot"></i><span class="redact" data-redact="Room open" data-offset="900"></span></span>
-        <button id="leave-m" class="ghost"><svg class="i" aria-hidden="true"><use href="#i-sign-out"/></svg><span id="leave-m-t">Close</span></button>
+    <header class="top">
+      <div class="logo desk"><i class="sq"></i><span>DropLink</span></div>
+      <div class="vr desk"></div>
+      <div class="youare lb">You are:<i class="sq me-sq"></i><span class="nm me-name"></span></div>
+      <div class="spacer desk"></div>
+      <div class="tools">
+        <button id="gear" class="ib" aria-label="Room settings" title="Room settings" aria-expanded="false"><svg class="i"><use href="#i-gear-six"/></svg></button>
+        <button id="mem-btn" class="mem-btn lb" aria-label="Members" aria-expanded="false"><svg class="i"><use id="mem-ico" href="#i-users-b"/></svg><span id="mem-count"></span><span id="mem-badge" class="badge" aria-label="Someone waiting" hidden></span></button>
+        <button id="leave" class="ib leave-btn lb" aria-label="Leave room"><svg class="i"><use href="#i-sign-out"/></svg><span class="t">Leave</span></button>
+        <button class="ib theme-btn" aria-label="Toggle light or dark mode" title="Switch theme"><svg class="i i-sun"><use href="#i-sun"/></svg><svg class="i i-moon"><use href="#i-moon"/></svg></button>
       </div>
-      <div class="brand desk"><span class="logo"><svg class="i" aria-hidden="true"><use href="#i-arrows-left-right"/></svg></span><span class="brand-name">DropLink</span></div>
-      <div class="codeblock">
-        <div class="label">Room code</div>
-        <div class="code-row">
-          <div id="room-code" class="room-code"></div>
-          <button id="copy-code-m" class="icon-btn mob" aria-label="Copy room code"><svg class="i" aria-hidden="true"><use href="#i-copy"/></svg></button>
+      <div id="mem-pop" class="pop mem-pop" hidden>
+        <div class="p-head lb"><span><i class="sq s6"></i>Members</span><span class="mem-n"></span></div>
+        <div class="pop-room"><div class="lb sm">Room</div><div class="dsp room-code"></div></div>
+        <div class="mem-list"></div>
+        <div class="waiting" hidden></div>
+      </div>
+      <div id="set-pop" class="pop set-pop" hidden>
+        <div class="p-head lb"><span><i class="sq s6"></i>Room settings</span><button id="set-x" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></div>
+        <div class="set-row"><div><div class="lb">Members</div><small>Max people in the room</small></div><div class="step"><button id="slot-down" class="ib" aria-label="Fewer"><svg class="i"><use href="#i-minus-b"/></svg></button><div id="slots" class="dsp"></div><button id="slot-up" class="ib" aria-label="More"><svg class="i"><use href="#i-plus-b"/></svg></button></div></div>
+        <div class="set-row"><div><div class="lb">Lock room</div><small>Stop anyone new joining</small></div><button id="lock" class="tgl" role="switch" aria-checked="false" aria-label="Lock room"></button></div>
+        <div class="set-row"><div><div class="lb sm">Auto-admit</div><small class="xs">No approval needed</small></div><button id="auto" class="tgl" role="switch" aria-checked="false" aria-label="Auto-admit"></button></div>
+        <div class="set-row"><div><div class="lb">New code</div><small>Old code stops working</small></div><button id="new-code" class="ib" aria-label="New code"><svg class="i"><use href="#i-arrows-clockwise"/></svg></button></div>
+        <button id="close-room" class="close-room lb"><span>Close room</span><svg class="i"><use href="#i-power"/></svg></button>
+      </div>
+    </header>
+    <div class="room-body">
+      <aside id="rail" class="rail">
+        <div id="code-band" class="band">
+          <div class="pix" data-seed="11"></div>
+          <div class="bx cx">
+            <div class="bx-row"><div class="tag lb">Room code</div></div>
+            <div class="code-row"><div class="code dsp room-code"></div><button id="copy-code" class="copy-big" aria-label="Copy code" title="Copy code"><svg class="i"><use href="#i-copy"/></svg></button></div>
+            <div class="phon room-phon"></div>
+          </div>
+          <div class="pix b" data-seed="47"></div>
         </div>
-        <div id="phonetic" class="phon"></div>
-        <button id="copy-code-d" class="btn sm desk"><svg class="i" aria-hidden="true"><use href="#i-copy"/></svg><span>Copy code</span></button>
-      </div>
-      <div id="req-wrap" hidden>
-        <div class="sec-head"><span>Wants to join</span><span id="req-n"></span></div>
-        <div id="req-list" class="list"></div>
-      </div>
-      <div>
-        <div class="sec-head"><span>In the room</span><span id="mem-n"></span></div>
-        <ul id="mem-list" class="list"></ul>
-      </div>
-      <label id="auto-wrap" class="auto" hidden><input type="checkbox" id="auto"><span>Let people in without asking</span></label>
-      <div class="side-foot">
-        <button id="to-thread" class="btn mob">Back to thread<svg class="i" aria-hidden="true"><use href="#i-arrow-right"/></svg></button>
-        <button id="leave-d" class="btn desk"><svg class="i" aria-hidden="true"><use href="#i-sign-out"/></svg><span id="leave-d-t">Close room</span></button>
-      </div>
-    </aside>
-
-    <section class="main">
-      <header class="head-m">
-        <div class="head-row">
-          <button id="head-code" class="head-code" aria-label="Room details"></button>
-          <button id="badge" class="btn sm" hidden></button>
-          <button id="leave-t" class="icon-btn" aria-label="Leave room"><svg class="i" aria-hidden="true"><use href="#i-sign-out"/></svg></button>
+        <div class="rail-mem">
+          <div class="rail-head lb"><span>Members</span><i></i><span class="mem-n"></span></div>
+          <div class="mem-list"></div>
+          <div class="waiting" hidden></div>
         </div>
-        <div id="chips" class="chips"></div>
-      </header>
-      <header class="head-d">
-        <h2 class="redact" data-redact="Room thread" data-offset="500"></h2>
-        <span class="direct"><svg class="i" aria-hidden="true"><use href="#i-lock-simple"/></svg><span class="redact" data-redact="Direct · nothing leaves these devices" data-offset="1800"></span></span>
-      </header>
-      <div id="thread" class="thread" aria-live="polite"></div>
-      <form id="composer" class="composer" autocomplete="off">
-        <button type="button" id="attach" class="attach" aria-label="Attach files"><svg class="i m" aria-hidden="true"><use href="#i-plus"/></svg><svg class="i d" aria-hidden="true"><use href="#i-paperclip"/></svg><span>Attach</span></button>
-        <input id="files" type="file" multiple hidden>
-        <div class="pill">
-          <textarea id="text" rows="1" aria-label="Message"></textarea>
-          <button type="submit" id="send" class="send" aria-label="Send"><svg class="i" aria-hidden="true"><use href="#i-arrow-up"/></svg></button>
-        </div>
-      </form>
-      <div id="drop" class="drop" hidden><svg class="i" aria-hidden="true"><use href="#i-tray-arrow-down"/></svg><span>Drop to send to everyone</span></div>
-    </section>
+      </aside>
+      <section class="main">
+        <div id="thread" class="thread" aria-live="polite"><div class="grow"></div></div>
+        <div id="typing" class="typing-slot"></div>
+        <form id="composer" class="composer" autocomplete="off">
+          <button type="button" id="attach" class="attach" aria-label="Attach files"><svg class="i"><use href="#i-paperclip"/></svg></button>
+          <input id="files" type="file" multiple hidden>
+          <textarea id="text" rows="1" aria-label="Message" placeholder="Message or paste_"></textarea>
+          <button type="submit" id="send" class="send" aria-label="Send"><svg class="i"><use href="#i-arrow-up-b"/></svg></button>
+        </form>
+        <div id="drop" class="drop" hidden><div><div class="dsp">Drop to send</div><div id="drop-to" class="lb"></div></div></div>
+      </section>
+    </div>
+    <div id="pop-scrim" class="scrim" hidden></div>
   </section>
 
+  <div id="join" class="modal" hidden>
+    <div class="scrim" id="join-scrim"></div>
+    <div class="panel" role="dialog" aria-modal="true" aria-label="Join with code">
+      <div class="p-head lb"><span><i class="sq s6"></i>Join with code</span><span><span id="code-n">0 / 6</span><button id="join-x" class="ib sm" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></span></div>
+      <div id="prompt" class="prompt"><span>&gt; join --code</span><span id="typed" class="typed"></span><span class="caret"></span><input id="code-in" aria-label="Room code" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" inputmode="none" maxlength="12"></div>
+      <div id="kb" class="kb"></div>
+      <button id="connect" class="connect lb"><span id="connect-t">Enter the 6-character code</span><span class="hint">Enter <svg class="i"><use href="#i-arrow-elbow-down-left"/></svg></span></button>
+    </div>
+  </div>
+
+  <div id="ct" class="ct" role="alertdialog" aria-labelledby="ct-title" hidden>
+    <div class="hz"></div>
+    <div class="ct-mid"><div class="ct-col">
+      <div class="ct-alert lb"><span><svg class="i"><use href="#i-warning-b"/></svg><span id="ct-alert"></span></span><span class="room-code"></span></div>
+      <div id="ct-title" class="ct-title dsp"></div>
+      <div class="ct-num"><div id="ct-n" class="dsp">10</div><div class="lb"><span>Seconds</span><span>left</span></div></div>
+      <div id="ct-bar" class="ct-bar"></div>
+      <div id="ct-msg" class="ct-msg"></div>
+      <div id="heir" class="heir" hidden><span class="lb"><svg class="i"><use href="#i-crown-simple-b"/></svg><span id="heir-lead">Host passes to</span></span><span><i class="sq"></i><span id="heir-name" class="dsp"></span></span></div>
+      <div class="ct-btns"><button id="ct-stay" class="stay lb"><span id="ct-stay-t"></span><svg class="i"><use href="#i-arrow-counter-clockwise-b"/></svg></button><button id="ct-go" class="go lb"><span id="ct-go-t"></span><svg class="i"><use href="#i-power-b"/></svg></button></div>
+    </div></div>
+    <div class="hz bot"></div>
+  </div>
 </main>
 <script src="vendor/peerjs.min.js"></script>
 <script src="app.js"></script>
