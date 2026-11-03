@@ -1016,20 +1016,24 @@ function requestRow(id, name) {
   return r;
 }
 
-// host on a phone: each knock also shows up in the thread as a card, gone once answered (desktop has them in the rail)
-const reqCards = new Map(); // peer id -> card in the thread
+// host on a phone: each knock also shows up in the thread as a coloured line with deny / let in, gone once answered
+// (desktop has them in the rail)
+const reqCards = new Map(); // peer id -> line in the thread
 function syncRequestCards() {
   for (const [id, card] of reqCards) if (!isHost || !pending.has(id)) { card.remove(); reqCards.delete(id); }
   if (!isHost) return;
   for (const [id, p] of pending) {
     if (reqCards.has(id)) continue;
-    const card = h('div', 'msg req');
-    card.style.setProperty('--c', 'var(--wait)');
-    const meta = h('div', 'meta lb');
-    meta.append(h('i', 'sq s8'), h('span', 'nm', p.name), h('span', '', `· wants to join · ${time()}`));
-    const box = h('div', 'fcard req-card');
-    box.append(requestRow(id, p.name));
-    card.append(meta, box);
+    const card = h('div', 'sys req lb');
+    const no = h('button', 'yn');
+    no.setAttribute('aria-label', `Deny ${p.name}`);
+    no.append(icon('x-b'));
+    const yes = h('button', 'yn yes');
+    yes.setAttribute('aria-label', `Let ${p.name} in`);
+    yes.append(icon('check-b'));
+    no.onclick = () => approve(id, false);
+    yes.onclick = () => approve(id, true);
+    card.append(h('span', '', `— ${p.name} wants to join · ${time()} —`), no, yes);
     $('thread').append(card);
     reqCards.set(id, card);
     stick();
