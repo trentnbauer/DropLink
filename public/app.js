@@ -6,7 +6,8 @@ const MAX_MEMBERS = 8; // everyone links to everyone, so keep rooms small (and t
 const PREFIX = 'droplink-';
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no 0/O/1/I/L: 31 characters
 const CODE_RE = /^[A-HJKMNP-Z2-9]{6}$/;
-const PALETTE = [['Ember', '#ff5b1f'], ['Volt', '#c6ff1a'], ['Saffron', '#ffc21a'], ['Rose', '#ff6fae'], ['Mint', '#3ff0a8'], ['Tangerine', '#ff9a3c'], ['Citrine', '#f2f05a'], ['Aqua', '#33e6e0']];
+// eight hues kept far apart (red-orange, amber, lime, green, sky, violet, magenta, pink) so no two people look alike
+const PALETTE = [['Ember', '#ff5b1f'], ['Saffron', '#ffc21a'], ['Volt', '#c6ff1a'], ['Mint', '#3ff0a8'], ['Ice', '#6fd3ff'], ['Lilac', '#b9a2ff'], ['Orchid', '#ea7bff'], ['Rose', '#ff6fae']];
 const CALLSIGNS = PALETTE.map((p) => p[0]);
 const colorOf = (name) => (PALETTE.find((p) => p[0] === name) || [, '#a3a39c'])[1];
 const calm = matchMedia('(prefers-reduced-motion: reduce)');
