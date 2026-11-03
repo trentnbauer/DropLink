@@ -260,8 +260,9 @@ button { cursor: pointer; padding: 0; }
 .recv { height: 30px; padding: 0 10px; border: 1px dashed var(--dash); color: var(--ink2); border-radius: 3px; display: flex; align-items: center; gap: 6px; flex: none; }
 .recv .i { animation: spin 1.2s linear infinite; }
 @keyframes spin { to { transform: rotate(1turn); } }
-.sys.req { color: var(--wait); display: flex; align-items: center; justify-content: center; gap: 8px; }
-.sys.req .yn { width: 22px; height: 22px; font-size: 11px; }
+.req-row { flex: none; margin: 0 -14px; padding: 10px 14px; background: var(--c); color: var(--on-acc); display: flex; align-items: center; gap: 10px; animation: pop .24s cubic-bezier(.2, .8, .2, 1.2) both; }
+.req-row .dsp { flex: 1; min-width: 0; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.req-row button { width: 44px; height: 32px; flex: none; background: transparent; color: var(--on-acc); border: 2px solid var(--on-acc); border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
 .typing-slot { height: 0; position: relative; }
 .typing { position: absolute; left: 14px; bottom: 8px; display: flex; align-items: center; gap: 8px; font-size: 10px; color: var(--ink3); background: var(--bg); padding: 4px 8px 4px 0; z-index: 2; animation: up .18s; }
 .typing .nm { color: var(--c); font-weight: 600; }
@@ -407,7 +408,7 @@ button { cursor: pointer; padding: 0; }
   .rail .av { width: 28px; height: 28px; font-size: 12px; }
   .rail .waiting { padding: 8px 0; margin-top: 8px; }
   .thread { padding: 24px 40px; gap: 14px; }
-  .sys.req { display: none; } /* requests are in the rail on desktop */
+  .req-row { display: none; } /* requests are in the rail on desktop */
   .typing { left: 40px; }
   .composer { padding: 14px 40px 22px; }
   .pop { right: 20px; top: calc(100% + 6px); }
