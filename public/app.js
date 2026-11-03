@@ -217,10 +217,38 @@ requestAnimationFrame(() => { $('mq').style.animationDuration = $('mq').scrollWi
 
 function setView(v) {
   const prev = $('app').dataset.view;
+  const strip = prev === 'open' && v === 'room' ? $('strip').getBoundingClientRect() : null; // read before it is hidden
   $('app').dataset.view = v;
   for (const id of ['start', 'open', 'wait', 'room']) $('v-' + id).hidden = id !== v;
   closePops();
-  if (prev !== v) { restart($('v-' + v), 'enter'); background(v); }
+  if (prev === v) return;
+  restart($('v-' + v), 'enter');
+  background(v);
+  if (v === 'room') requestAnimationFrame(() => sweep(strip)); // after the room has its code and lines
+}
+
+// entering the thread: a block of your colour sweeps over it, holds, then wipes away downwards.
+// Phone: it fills from the code band down. Desktop: it grows from the opening screen's loading strip (or mid-thread) into the thread column.
+function sweep(strip) {
+  if (calm.matches) return;
+  const app = $('app').getBoundingClientRect();
+  const area = (wide.matches ? document.querySelector('#v-room .main') : $('thread')).getBoundingClientRect();
+  const top = wide.matches ? area.top : Math.max(area.top, $('code-band').getBoundingClientRect().bottom);
+  const H = (wide.matches ? area.bottom : app.bottom) - top;
+  const sw = h('div', 'sweep');
+  Object.assign(sw.style, { left: area.left - app.left + 'px', top: top - app.top + 'px', width: area.width + 'px', height: H + 'px' });
+  $('app').append(sw);
+  const ease = 'cubic-bezier(.65,0,.35,1)', full = 'inset(0 0 0 0)';
+  let kf = [{ clipPath: 'inset(0 0 100% 0)' }, { clipPath: full, offset: 0.7 }, { clipPath: full }];
+  if (wide.matches) {
+    const ly = clamp(strip ? strip.top - top : H * 0.45, 0, H - 10), lb = H - ly - 10;
+    kf = [{ clipPath: `inset(${ly}px 50% ${lb}px 50%)` }, { clipPath: `inset(${ly}px 0 ${lb}px 0)`, offset: 0.35 }, { clipPath: full, offset: 0.75 }, { clipPath: full }];
+  }
+  sw.animate(kf, { duration: 520, easing: ease, fill: 'forwards' });
+  setTimeout(() => {
+    sw.animate([{ clipPath: full }, { clipPath: 'inset(100% 0 0 0)' }], { duration: 420, easing: ease, fill: 'forwards' });
+    setTimeout(() => sw.remove(), 440);
+  }, wide.matches ? 760 : 700);
 }
 wide.addEventListener('change', () => { background($('app').dataset.view); placeBand(); renderRoom(); });
 calm.addEventListener('change', () => background($('app').dataset.view));
