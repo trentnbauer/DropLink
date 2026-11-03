@@ -4,7 +4,7 @@ Send text and files between devices in a room. Nothing is uploaded or stored: de
 and a small TURN relay carries the (encrypted) traffic for networks that cannot connect directly.
 
 - Open a room and you are in the app as soon as its code appears. Read the 6-character code (it also shows a phonetic spelling) to other people, or join by typing a code on the on-screen keyboard (a hardware keyboard works too; `1` and `2` are shortcuts on the start screen).
-- Nobody types a name: each person gets a callsign and colour (Ember, Volt, Saffron, Rose, Mint, Tangerine, Citrine, Aqua), unique within the room. Your colour marks everything you send.
+- Nobody types a name: each person gets a callsign and colour (Ember, Saffron, Volt, Mint, Ice, Lilac, Orchid, Rose: eight hues kept far apart), unique within the room. Your colour marks everything you send.
 - Anything you send is held on your device and handed to everyone who joins later, so you can share first and have people join afterwards. People who joined earlier get it live.
 - The host approves each person (one tap) while the guest waits on a "Knocking on" screen. Room settings (host only): the maximum number of people (2 to 8), lock the room, auto-admit (no approval), a new code (the old one stops working) and close the room. Everyone is linked to everyone.
 - Leaving or closing starts a 10-second countdown that can be cancelled. When the host leaves, a random member becomes host and keeps the same code; closing the room disconnects everyone.
