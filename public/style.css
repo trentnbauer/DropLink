@@ -342,6 +342,9 @@ button { cursor: pointer; padding: 0; }
 .stay { background: var(--ink); color: var(--bg); border: 0; }
 .go { background: transparent; color: var(--alert); border: 1px solid var(--alert); }
 
+/* entering the thread: a sweep of your colour */
+.sweep { position: absolute; z-index: 7; background: var(--me); pointer-events: none; }
+
 /* exit scramble cover */
 .cover { position: absolute; inset: 0; z-index: 30; display: grid; pointer-events: none; }
 
