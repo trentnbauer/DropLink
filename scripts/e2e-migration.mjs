@@ -1,5 +1,5 @@
 // Browser test: host, Bob, Carol; host's tab dies; Bob takes over; Dave joins via the same code.
-// Needs playwright (npm i playwright) and internet (public PeerJS broker). Run: node test/e2e-migration.mjs
+// Needs playwright (npm i playwright) and internet (public PeerJS broker). Run: node scripts/e2e-migration.mjs
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import assert from 'node:assert/strict';
