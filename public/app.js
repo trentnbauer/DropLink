@@ -27,6 +27,7 @@ let connectTimer;
 
 let peer, door, doorConn, myName, hostId, isHost, roomCode, knocked, welcomed;
 let maxSlots = MAX_MEMBERS, locked = false, autoAdmit = false;
+let order = []; // peer ids in join order (host first): the earliest one still here takes over when the host leaves
 const members = new Map(); // peer id -> { conn, name }: approved people we can talk to
 const pending = new Map(); // host only: peer id -> { conn, name } knocking at the door
 const allowed = new Set(); // ids the host announced as approved newcomers
@@ -301,6 +302,9 @@ function reset(msg = '', cls = '', animate = true) {
   if (view === 'room') exitScramble(land); else blocks(land);
 }
 
+// closing the tab: close links now so others notice at once instead of after the ICE timeout
+addEventListener('pagehide', () => { peer?.destroy(); door?.destroy(); });
+
 function teardown() {
   clearTimeout(connectTimer);
   if (ct) clearInterval(ct.timer);
@@ -309,6 +313,7 @@ function teardown() {
   p?.destroy(); d?.destroy();
   hostId = isHost = roomCode = knocked = welcomed = null;
   maxSlots = MAX_MEMBERS; locked = autoAdmit = false;
+  order = [];
   members.clear(); pending.clear(); allowed.clear(); incoming.clear();
   for (const t of typers.values()) clearTimeout(t);
   typers.clear();
@@ -517,6 +522,7 @@ async function openRoom() {
     peer.on('open', () => {
       $('ck1').textContent = 'OK';
       hostId = peer.id;
+      order = [hostId];
       openDoor(roomCode, false, (c) => { roomCode = c; $('ck2').textContent = 'OK'; res(); });
     });
   });
@@ -607,17 +613,26 @@ function wire(conn, outbound, viaDoor = false) {
       if (!welcomed) reset(knocked ? 'The host left.' : "Couldn't reach that room.", 'bad');
       return;
     }
-    const m = members.get(conn.peer);
+    const m = members.get(conn.peer), id = conn.peer;
     if (m?.conn === conn) {
       members.delete(conn.peer);
       incoming.delete(conn.peer);
       clearTyping(conn.peer);
-      sysLine(`${m.name} left`);
-      if (!isHost && !members.size) return reset('The room is closed.');
+      order = order.filter((x) => x !== id);
+      if (id === hostId && !isHost && welcomed) {
+        // host vanished without handing over: the earliest joiner still here takes the room code
+        const heir = nextHost();
+        hostId = heir;
+        const name = heir === peer.id ? myName : members.get(heir).name;
+        sysLine(`${m.name} left. ${name} is now the host`);
+        if (heir === peer.id) { isHost = true; openDoor(roomCode, true, () => renderRoom()); }
+      } else sysLine(`${m.name} left`);
     }
     renderRoom();
   });
 }
+
+const nextHost = () => order.find((x) => x === peer.id || members.has(x));
 
 function addMember(conn, name) {
   const nm = CALLSIGNS.includes(name) ? name : 'Guest';
@@ -642,7 +657,7 @@ function onControl(conn, m) {
   const from = members.get(id);
   if (!from) return;
   const byHost = id === hostId;
-  if (m.t === 'joining' && byHost) allowed.add(m.id);
+  if (m.t === 'joining' && byHost) { allowed.add(m.id); order.push(m.id); }
   else if (m.t === 'text') { clearTyping(id); addItem({ kind: 'text', dir: 'in', from: from.name, text: m.v }); }
   else if (m.t === 'typing') showTyping(id);
   else if (m.t === 'file') {
@@ -675,6 +690,7 @@ function onControl(conn, m) {
 function roomSettings(m) {
   maxSlots = clamp(Number(m.max) || MAX_MEMBERS, 2, MAX_MEMBERS);
   locked = !!m.locked;
+  autoAdmit = !!m.auto; // everyone keeps it so a successor inherits it
 }
 
 // host: someone knocked on the door
@@ -712,6 +728,7 @@ function fromDoor(conn, m) {
     welcomed = true;
     setMe(m.name);
     hostId = m.host;
+    order = [...m.peers, peer.id];
     roomSettings(m);
     conn.close();
     clearTimeout(connectTimer);
@@ -726,8 +743,9 @@ function approve(id, ok) {
   pending.delete(id);
   if (!ok) { sendJson(p.conn, { t: 'denied' }); setTimeout(() => p.conn.close(), 300); sysLine(`${p.name} denied`); return renderRoom(); }
   allowed.add(id);
+  order.push(id);
   toAll({ t: 'joining', id });
-  sendJson(p.conn, { t: 'welcome', name: p.name, host: peer.id, peers: [peer.id, ...members.keys()], max: maxSlots, locked });
+  sendJson(p.conn, { t: 'welcome', name: p.name, host: peer.id, peers: order.filter((x) => x === peer.id || members.has(x)), max: maxSlots, locked, auto: autoAdmit });
   renderRoom();
 }
 
@@ -1101,14 +1119,14 @@ $('mem-btn').onclick = () => togglePop('mem-pop', 'mem-btn');
 $('pop-scrim').onclick = closePops;
 $('set-x').onclick = closePops;
 
-const shareSettings = () => { toAll({ t: 'room', max: maxSlots, locked, code: roomCode }); renderRoom(); };
+const shareSettings = () => { toAll({ t: 'room', max: maxSlots, locked, auto: autoAdmit, code: roomCode }); renderRoom(); };
 $('slot-down').onclick = () => { maxSlots--; shareSettings(); };
 $('slot-up').onclick = () => { maxSlots++; shareSettings(); };
 $('lock').onclick = () => { locked = !locked; shareSettings(); };
 $('auto').onclick = () => {
   autoAdmit = !autoAdmit;
   if (autoAdmit) for (const id of [...pending.keys()]) approve(id, true);
-  renderRoom();
+  shareSettings();
 };
 $('new-code').onclick = () => {
   closePops();
@@ -1132,7 +1150,7 @@ function startCountdown(mode) {
   if (ct) return;
   closePops();
   const leave = mode === 'leave';
-  ct = { mode, n: 10, half: 0, heir: leave && isHost && members.size ? pick([...members.keys()]) : null };
+  ct = { mode, n: 10, half: 0, heir: leave && isHost ? order.find((x) => members.has(x)) || null : null };
   $('ct-alert').textContent = leave ? (isHost ? 'Alert · host exit' : 'Alert · exit') : 'Alert · shutdown';
   $('ct-msg').textContent = leave
     ? (isHost && !members.size ? "You'll be disconnected. Nobody else is here, so the room closes." : "You'll be disconnected. The room stays open for everyone else.")
@@ -1155,7 +1173,7 @@ function renderCt() {
   $('ct-title').textContent = leave ? (done ? 'Left room' : 'Leaving room') : (done ? 'Room closed' : 'Room closing');
   $('ct-title').classList.toggle('flash', done || ct.half % 2 === 0);
   [...$('ct-bar').children].forEach((c, i) => c.classList.toggle('on', i < ct.n));
-  if (ct.heir && !members.has(ct.heir)) ct.heir = members.size ? pick([...members.keys()]) : null; // they left meanwhile
+  if (ct.heir && !members.has(ct.heir)) ct.heir = order.find((x) => members.has(x)) || null; // they left meanwhile
   $('heir').hidden = !ct.heir;
   if (!ct.heir) return;
   const name = members.get(ct.heir).name;
